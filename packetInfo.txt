@@ -1,0 +1,69 @@
+We are getting 48 vars, but we only want to display the first 32.
+
+/* Calculated and averaged from ADC0 readings /
+unsigned short IAT; / Inlet Air Temperature (MAT JS) : 0.0 - 655.35 (0.01 Kelvin (/100)) /
+unsigned short CHT; / Coolant / Head Temperature (CLT JS) : 0.0 - 655.35 (0.01 Kelvin (/100)) /
+unsigned short TPS; / Throttle Position Sensor (TPS JS) : 0.0 - 102.39 (0.001? % (/640)) /
+unsigned short EGO; / Exhaust Gas Oxygen (O2 JS) : 0.000 - 1.999999 (0.0001? lambda (/32768)) /
+unsigned short MAP; / Manifold Absolute Pressure (5euroh1) : 0.0 - 655.35 (0.01 kPa (/100)) /
+unsigned short AAP; / Atmospheric Absolute Pressure (6euroh1) : 0.0 - 655.35 (0.01 kPa (/100)) /
+unsigned short BRV; / Battery Reference Voltage (4euroh1) : 0.000 - 65.535 (0.001 Volts (/1000)) /
+unsigned short MAT; / Manifold Air Temperature (Spare JS) : 0.0 - 655.35 (0.01 Kelvin (/100)) /
+
+/ Calculated and averaged from ADC1 readings /
+unsigned short EGO2; / Exhaust Gas Oxygen (NC) : 0.000 - 1.999999 (0.0001? lambda (/32768)) /
+unsigned short IAP; / Intercooler Absolute Pressure (NC) : 0.0 - 655.35 (0.01 kPa (/100)) /
+unsigned short MAF; / Mass Air Flow : 0.0 - 65535.0 (raw units from lookup) /
+
+/ Calculated from MAP and TPS history /
+unsigned short DMAP; / Delta MAP kPa/second or similar /
+unsigned short DTPS; / Delta TPS %/second or similar /
+
+/ Calculated from engine position data /
+unsigned short RPM; / Revolutions Per Minute (Calced) : 0 - 32767.5 (0.5 RPM (/2)) /
+unsigned short DRPM; / Delta RPM (Calced) : 0 - 32767.5 (0.5 RPM/Second (/2)) /
+unsigned short DDRPM; / Delta Delta RPM (Calced) : 0 - 32767.5 (0.5 RPM/Second2 (/2)) */
+
+/* Calculated from core vars /
+unsigned short LoadMain; / Configurable unit of load /
+unsigned short VEMain; / Divide by 512 to get % /
+
+unsigned short Lambda; / Divide by 32768 to get Lamda /
+unsigned short AirFlow; / top half /
+unsigned short densityAndFuel; / bottom half /
+
+unsigned short BasePW; / In timer ticks of 0.8us /
+unsigned short IDT; / 0.8us ticks /
+unsigned short ETE; / 0.8us ticks /
+signed short TFCTotal; / Transient fuel correction /
+
+unsigned short FinalPW; / In timer ticks of 0.8us /
+unsigned short RefPW; / In timer ticks of 0.8us /
+
+unsigned short sp1; / /
+unsigned short sp2; / /
+unsigned short sp3; / /
+unsigned short sp4; / /
+unsigned short sp5; / /
+
+// unsigned short ; / */
+
+/* ADC0 raw readings /
+unsigned short IAT; / Inlet Air Temperature (MAT JS) / / COMPULSORY! /
+unsigned short CHT; / Coolant / Head Temperature (CLT JS) / / COMPULSORY! /
+unsigned short TPS; / Throttle Position Sensor (TPS JS) / / Reduced performance without /
+unsigned short EGO; / Exhaust Gas Oxygen (O2 JS) / / Recommended /
+unsigned short BRV; / Battery Reference Voltage (4euroh1) / / COMPULSORY! /
+unsigned short MAP; / Manifold Absolute Pressure (5euroh1) / / COMPULSORY OR TPS OR MAF /
+unsigned short AAP; / Atmospheric Absolute Pressure (6euroh1) / / Recommended /
+unsigned short MAT; / Manifold Air Temperature (Spare JS) / / Could help heat soak issues /
+
+/ ADC1 raw readings /
+unsigned short EGO2; / Exhaust Gas Oxygen (NC) / / V engine option /
+unsigned short IAP; / Intercooler Absolute Pressure (NC) / / Turbo engine option /
+unsigned short MAF; / Mass Air Flow (NC) / / OEM engine option /
+unsigned short SpareADC3; / Spare ADC1 port 3 (NC) /
+unsigned short SpareADC4; / Spare ADC1 port 4 (NC) /
+unsigned short SpareADC5; / Spare ADC1 port 5 (NC) /
+unsigned short SpareADC6; / Spare ADC1 port 6 (NC) /
+unsigned short SpareADC7; / Spare ADC1 port 7 (NC) */
