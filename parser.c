@@ -50,6 +50,11 @@ int main( int argc, char *argv[] ){
 			return 1;
 		}
 
+		FILE *outputFile;
+		outputFile = fopen(argv[1],"w");
+		putc("t",outputFile);
+		fclose(outputFile);
+
 		fseek(inputFile, 0L, SEEK_END);
 		int length = ftell(inputFile);
 		rewind(inputFile);
