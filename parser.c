@@ -25,6 +25,8 @@
 
 
 #include <stdio.h>
+#include <string.h>
+#include <math.h>
 
 
 /* Special byte definitions */
@@ -34,9 +36,14 @@
 #define ESCAPED_ESCAPE_BYTE		0x44
 #define ESCAPED_START_BYTE		0x55
 #define ESCAPED_STOP_BYTE		0x33
+#define OUT_FILE_EXTENSION	    ".msq"
 
 
 /* TODO split into functions? */
+
+/* TODO move to header */
+int addCharToString(char string[], char c);
+
 int main( int argc, char *argv[] ){
 	if(argc == 1){
 		puts("No argument supplied!! Please supply a file to parse.");
@@ -49,16 +56,17 @@ int main( int argc, char *argv[] ){
 			printf("Error opening file %s, please check the name and try again!\n", argv[1]);
 			return 1;
 		}
-
+        /* generate outFile name and open it for writing*/
 		FILE *outputFile;
-		outputFile = fopen(argv[1],"w");
-		putc("t",outputFile);
-		fclose(outputFile);
-
-		fseek(inputFile, 0L, SEEK_END);
+		char outFileName[50];
+        strcpy(outFileName,argv[1]);
+        strcat(outFileName,OUT_FILE_EXTENSION);
+        outputFile = fopen(outFileName,"w");
+        fseek(inputFile, 0L, SEEK_END);
 		int length = ftell(inputFile);
 		rewind(inputFile);
 		printf("The length of file %s is %u\n\n", argv[1], length);
+
 		printf("Attempting to parse file...\n\n");
 
 		/* Statistic collection variables */
@@ -197,5 +205,14 @@ int main( int argc, char *argv[] ){
 		/* Subtract one to eliminate command name. */
 		printf("Wrong number of arguments!! Was %u should be 1...\n", argc - 1);
 	}
+
 	return 0; // non-zero = error
+}
+
+int addCharToString(char string[], char c){
+	int stringEnd;
+	stringEnd = strlen(string);
+	string[stringEnd] = c;
+	string[++stringEnd] = '\0';   /* add new EOF marker */
+	return 0;
 }
