@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
+
 
 
 /* Special byte definitions */
@@ -36,7 +38,9 @@
 #define ESCAPED_ESCAPE_BYTE		0x44
 #define ESCAPED_START_BYTE		0x55
 #define ESCAPED_STOP_BYTE		0x33
+#define PACKET_SIZE				1024   /* 1024 bytes */
 #define OUT_FILE_EXTENSION	    ".msq"
+#define END_OF_STRING             0x00
 
 
 /* TODO split into functions? */
@@ -62,6 +66,11 @@ int main( int argc, char *argv[] ){
         strcpy(outFileName,argv[1]);
         strcat(outFileName,OUT_FILE_EXTENSION);
         outputFile = fopen(outFileName,"w");
+        if(outputFile == NULL){
+        	printf("\nError opening output file %s",outFileName);
+        	return 1;
+        }
+
         fseek(inputFile, 0L, SEEK_END);
 		int length = ftell(inputFile);
 		rewind(inputFile);
@@ -103,6 +112,23 @@ int main( int argc, char *argv[] ){
 				if(insidePacket){
 					/* Increment the counter */
 					startsInsidePacket++;
+					/* TODO Move this to a function/add structure */
+					char RPMHiByte = 2;
+					char RPMLowByte = 5;
+					//char RPMHiByte = character + 28;
+					//char RPMLowByte = character + 29;
+					char RPMString[3];
+					RPMString[0] = RPMHiByte;
+					RPMString[1] = RPMLowByte;
+					RPMString[2] = END_OF_STRING;
+					printf("\n RPMString is -> %s",RPMString);
+					int  RPM = atoi(RPMString);
+					printf("\n RPM is -> %d",RPM);
+					printf("\n LowByte is -> %d",RPMLowByte);
+					printf("\n HighByte is -> %d",RPMHiByte);
+					fputc('t',outputFile);
+					char delimiter = '\n';
+					fputc(delimiter,outputFile);
 					if(currentPacketLength == 0){
 						doubleStartByteOccurances++;
 //						printf("Double start byte occurred following packet number %u\n", packets);
