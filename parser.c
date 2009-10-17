@@ -29,8 +29,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-
-
 /* Special byte definitions */
 #define ESCAPE_BYTE	0xBB
 #define START_BYTE	0xAA
@@ -49,10 +47,10 @@
 int addCharToString(char string[], char c);
 
 int main( int argc, char *argv[] ){
-//	if(argc == 1){
-	if(argc == 5){
+	if(argc == 1){
+//	if(argc == 5){
 	puts("No argument supplied!! Please supply a file to parse.");
-	}else if(argc == 1){  /* was 2 */
+	}else if(argc == 2){  /* was 2 */
 		FILE *inputFile;
 	//	inputFile = fopen(argv[1], "rb");
         inputFile = fopen("slc.mountain.starting.near.top.bin","rb");
@@ -114,21 +112,17 @@ int main( int argc, char *argv[] ){
 					/* Increment the counter */
 					startsInsidePacket++;
 					/* TODO Move this to a function/add structure */
-					char RPMHiByte = 255;
-					char RPMLowByte = 255;
-					//char RPMHiByte = character + 28;
-					//char RPMLowByte = character + 29;
-				//	char RPMString[3];
-				//	RPMString[0] = RPMHiByte;
-				//	RPMString[1] = RPMLowByte;
-				//	RPMString[2] = END_OF_STRING;
-				//	printf("\n RPMString is -> %s",RPMString);
-				//	int  RPM = atoi(RPMString);
-					unsigned int RPM = RPMHiByte * 0xFF;
+					int RPMHiByte = character + 28;
+					int RPMLowByte = character + 29;
+					unsigned int RPM = (RPMHiByte << 8)  + RPMLowByte;
 					printf("\n RPM is -> %d",RPM);
-				//	printf("\n LowByte is -> %d",RPMLowByte);
+					printf("\n LowByte is -> %d",RPMLowByte);
 					printf("\n HighByte is -> %d",RPMHiByte);
-					fputc('t',outputFile);
+					char RPMChars[5];
+					itoa();
+					fputc('RPMCh',outputFile);
+
+
 					char delimiter = '\n';
 					fputc(delimiter,outputFile);
 					if(currentPacketLength == 0){
