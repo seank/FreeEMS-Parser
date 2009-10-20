@@ -45,6 +45,7 @@
 
 /* TODO move to header */
 int addCharToString(char string[], char c);
+int intToString(int number, char string[]);
 
 int main( int argc, char *argv[] ){
 	if(argc == 1){
@@ -111,17 +112,25 @@ int main( int argc, char *argv[] ){
 				if(insidePacket){
 					/* Increment the counter */
 					startsInsidePacket++;
+					long int currentFilePosition = ftell(inputFile);
 					/* TODO Move this to a function/add structure */
-					int RPMHiByte = character + 28;
-					int RPMLowByte = character + 29;
-					unsigned int RPM = (RPMHiByte << 8)  + RPMLowByte;
-					printf("\n RPM is -> %d",RPM);
+					long int newPOS = currentFilePosition + 27 ; /* 27 is the high byte of the rpm */
+				    fseek(inputFile,newPOS,SEEK_SET);
+				    int RPMHiByte = (int) fgetc(inputFile);
+				    int RPMLowByte = (int) fgetc(inputFile);
+				    fseek(inputFile,currentFilePosition,SEEK_SET); /* go back to start of packet */
+				    float RPM = ((RPMHiByte << 8)  + RPMLowByte) / 2;
+					printf("\n RPM is -> %f",RPM);
 					printf("\n LowByte is -> %d",RPMLowByte);
 					printf("\n HighByte is -> %d",RPMHiByte);
-					char RPMChars[5];
-					itoa();
-					fputc('RPMCh',outputFile);
-
+					char RPMChars[80];
+					sprintf(RPMChars,"%f",RPM);
+				    printf("\n RPMChars -> %s"),RPMChars;
+				    int i;
+				    char outChar;
+				    for (i=0;(outChar = RPMChars[i]) != END_OF_STRING;i++){
+				    	fputc(outChar,outputFile);
+				    }
 
 					char delimiter = '\n';
 					fputc(delimiter,outputFile);
@@ -237,4 +246,12 @@ int addCharToString(char string[], char c){
 	string[stringEnd] = c;
 	string[++stringEnd] = '\0';   /* add new EOF marker */
 	return 0;
+}
+
+// our test number is 50887
+int intToString(int number, char string[]){
+     char c;
+     int index = 0;
+     c = number;
+     return 0;
 }
