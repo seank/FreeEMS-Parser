@@ -37,17 +37,19 @@
 #define ESCAPED_START_BYTE		0x55
 #define ESCAPED_STOP_BYTE		0x33
 #define PACKET_SIZE				1024   /* 1024 bytes */
-#define OUT_FILE_EXTENSION	    ".msq"
-#define END_OF_STRING             0x00
+#define OUT_FILE_EXTENSION	    ".csv"
+#define END_OF_STRING           0x00
+#define MEGABYTE                0x100000 /* 1 megabyte in hex */
 
 
 /* TODO split into functions? */
 
 /* TODO move to header */
 int addCharToString(char string[], char c);
-int intToString(int number, char string[]);
+int stringToFile(char string[], int *outFile);
 
 int main( int argc, char *argv[] ){
+	static packetBuffer[MEGABYTE];
 	if(argc == 1){
 //	if(argc == 5){
 	puts("No argument supplied!! Please supply a file to parse.");
@@ -70,7 +72,7 @@ int main( int argc, char *argv[] ){
         	printf("\nError opening output file %s",outFileName);
         	return 1;
         }
-
+        char fieldName[25];
         fseek(inputFile, 0L, SEEK_END);
 		int length = ftell(inputFile);
 		rewind(inputFile);
@@ -100,6 +102,7 @@ int main( int argc, char *argv[] ){
 		unsigned char checksum = 0;
 		unsigned char lastChar = 0;
 		unsigned int currentPacketLength = 0;
+		unsigned int bufferIndex = 0;
 
 		/* Iterate through the file char at a time */
 		while(processed < length){
@@ -108,10 +111,12 @@ int main( int argc, char *argv[] ){
 
 			/* Look for a start byte to indicate a new packet */
 			if(character == START_BYTE){
+
 				/* If we are had already found a start byte */
 				if(insidePacket){
 					/* Increment the counter */
 					startsInsidePacket++;
+
 					long int currentFilePosition = ftell(inputFile);
 					/* TODO Move this to a function/add structure */
 					long int newPOS = currentFilePosition + 27 ; /* 27 is the high byte of the rpm */
@@ -131,9 +136,10 @@ int main( int argc, char *argv[] ){
 				    for (i=0;(outChar = RPMChars[i]) != END_OF_STRING;i++){
 				    	fputc(outChar,outputFile);
 				    }
-
 					char delimiter = '\n';
 					fputc(delimiter,outputFile);
+
+
 					if(currentPacketLength == 0){
 						doubleStartByteOccurances++;
 //						printf("Double start byte occurred following packet number %u\n", packets);
@@ -193,6 +199,7 @@ int main( int argc, char *argv[] ){
 						badChecksums++;
 						printf("Packet number %u ending of length %u at char number %u failed checksum! Received %u Calculated %u\n", packets, currentPacketLength, processed, lastChar, checksum);
 					}else{
+
 						goodChecksums++;
 //						printf("Packet number %u ending of length %u at char number %u checked out OK! Received %u Calculated %u\n", packets, currentPacketLength, processed, lastChar, checksum);
 					}
@@ -244,14 +251,15 @@ int addCharToString(char string[], char c){
 	int stringEnd;
 	stringEnd = strlen(string);
 	string[stringEnd] = c;
-	string[++stringEnd] = '\0';   /* add new EOF marker */
+	string[++stringEnd] = END_OF_STRING;   /* add new EOF marker */
 	return 0;
 }
 
-// our test number is 50887
-int intToString(int number, char string[]){
+int stringToFile(char string[], int *outFile){
+     int i;
      char c;
-     int index = 0;
-     c = number;
+	 for(i=0;(c=string[i])!= END_OF_STRING;i++){
+		fputc(c,outFile);
+	 }
      return 0;
 }

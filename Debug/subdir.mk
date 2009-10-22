@@ -4,13 +4,13 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../parser.c 
+../freeemsParser.c 
 
 OBJS += \
-./parser.o 
+./freeemsParser.o 
 
 C_DEPS += \
-./parser.d 
+./freeemsParser.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
