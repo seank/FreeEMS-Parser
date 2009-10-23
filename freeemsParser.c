@@ -142,18 +142,17 @@ int main(int argc, char *argv[]){
 			nextIsHeaderID = 1; /* we are expecting the next char to be the headerID(byte) */
 		}else if ((currentCharacter != START_BYTE) && nextIsHeaderID){ /* if our packet header says there's a length calculate it */
 			      if (currentCharacter && SBIT4){ /* if there is a payload length flag find the length */
-			    	  headerID = currentCharacter & SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
+			    	  headerID = currentCharacter | SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
 			    	  if (headerID == SBIT4){  /* TODO build switch case for all IDs */
 			    		  char junk = fgetc(inputFile);
 			    		  junk = fgetc(inputFile);  /* TODO do this the correct way with fseek maybe */
 			    		  char high = fgetc(inputFile);
 			    		  char low = fgetc(inputFile);
 			    		  payloadLength = ((int)high << 8) + low;
-			    		  printf("\nLength is -> %d",payloadLength);
-
+			    		 // printf("\nLength is -> %d",payloadLength);
 			    		  packetsWithLength++;
 			    	  }
-			    	  printf("\n HeaderID is %d",headerID);
+			    	 // printf("\n HeaderID is %d",headerID);
 			    	  nextIsHeaderID = 0;
 			      }
 			//
