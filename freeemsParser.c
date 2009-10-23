@@ -54,18 +54,18 @@
 int main(int argc, char *argv[]){
 
 	/*  Generic protocol constants */
-	const char SZEROS = 0x00; /* No bits = 0 */
-	const char SBIT0 = 0x01; /* 1st bit = 1 */
-	const char SBIT1 = 0x02; /* 2nd bit = 2 */
-	const char SBIT2 = 0x04; /* 3rd bit = 4 */
-	const char SBIT3 = 0x08; /* 4th bit = 8 */
-	const char SBIT4 = 0x10; /* 5th bit = 16 */
-	const char SBIT5 = 0x20; /* 6th bit = 32 */
-	const char SBIT6 = 0x40; /* 7th bit = 64 */
-	const char SBIT7 = 0x80; /* 8th bit = 128 */
+	const unsigned char SZEROS = 0x00; /* No bits = 0 */
+	const unsigned char SBIT0 = 0x01; /* 1st bit = 1   Payload Type */
+	const unsigned char SBIT1 = 0x02; /* 2nd bit = 2   Ack valid and or required*/
+	const unsigned char SBIT2 = 0x04; /* 3rd bit = 4   Ack type (-ve/+ve)*/
+	const unsigned char SBIT3 = 0x08; /* 4th bit = 8   Has Address */
+	const unsigned char SBIT4 = 0x10; /* 5th bit = 16  Has Length */
+	const unsigned char SBIT5 = 0x20; /* 6th bit = 32  FirmWare specific */
+	const unsigned char SBIT6 = 0x40; /* 7th bit = 64  FirmWare specific */
+	const unsigned char SBIT7 = 0x80; /* 8th bit = 128 FirmWare specific */
 
 	/* statics */
-	static packetBuffer[MEGABYTE];
+	static char packetBuffer[MEGABYTE];
 
 	/* Statistic collection variables */
 	/* TODO move to struct */
@@ -85,13 +85,20 @@ int main(int argc, char *argv[]){
 	unsigned int expectedPacketLength = 0;
 	unsigned int calculatedPacketLength = 0;
 	unsigned int packetPosition = 0;
+	unsigned int startBytesFound = 0;
+	unsigned int packetsWithLength = 0;
+	unsigned int payloadLength = 0;
 
 	/* Loop and state variables */
-	char currentCharacter = 0;
-	char insidePacket = 0;
+	unsigned char currentCharacter = 0;
+	unsigned char insidePacket = 0;
+	unsigned char insidePayload = 0;
 	unsigned int currentCharacterCount = 0;
 	unsigned int packetCount = 0;
 	unsigned int inFileLength = 0;
+	unsigned char nextIsHeaderID = 0;
+	unsigned char headerID = 0;
+
 
 	FILE *inputFile;
 	FILE *outputFile;
@@ -122,21 +129,44 @@ int main(int argc, char *argv[]){
 	fseek(inputFile,0L,SEEK_END);
 	inFileLength = ftell(inputFile);
 	rewind(inputFile);
-
-	while (currentCharacterCount < inFileLength ){
+    while (currentCharacterCount < inFileLength ){
 		currentCharacter = fgetc(inputFile);
 		currentCharacterCount++;
 		if (currentCharacter == START_BYTE){
+			if((currentCharacter == START_BYTE) && insidePacket){
+			  doubleStartByteOccurances++;
+			}
 			insidePacket = 1;
 			packetPosition = 0;
+			startBytesFound++;
+			nextIsHeaderID = 1; /* we are expecting the next char to be the headerID(byte) */
+		}else if ((currentCharacter != START_BYTE) && nextIsHeaderID){ /* if our packet header says there's a length calculate it */
+			      if (currentCharacter && SBIT4){ /* if there is a payload length flag find the length */
+			    	  headerID = currentCharacter & SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
+			    	  if (headerID == SBIT4){  /* TODO build switch case for all IDs */
+			    		  char junk = fgetc(inputFile);
+			    		  junk = fgetc(inputFile);  /* TODO do this the correct way with fseek maybe */
+			    		  char high = fgetc(inputFile);
+			    		  char low = fgetc(inputFile);
+			    		  payloadLength = ((int)high << 8) + low;
+			    		  printf("\nLength is -> %d",payloadLength);
 
-		}else if (insidePacket && (packetPosition == 0)){
-			packetPosition++;
-			char headerID = currentCharacter;
-		}
-
+			    		  packetsWithLength++;
+			    	  }
+			    	  printf("\n HeaderID is %d",headerID);
+			    	  nextIsHeaderID = 0;
+			      }
+			//
+			}
+	//	if (insidePacket){
+	//		packetPosition++;
+	//	}
 	}
-
+	printf("\n           Bytes In File -> %d",currentCharacterCount);
+    printf("\n      Packet Start Bytes -> %d",startBytesFound);
+    printf("\n   Packets with HasLength -> %d",packetsWithLength);
+    printf("\nDouble Start Bytes Found -> %d",doubleStartByteOccurances);
+    printf("\n");
 	return 0;
 }
 
