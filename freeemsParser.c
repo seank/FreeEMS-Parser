@@ -39,6 +39,10 @@
 #define DEFAULT_FILE_IN         "test.bin"
 #define DEFAULT_FILE_OUT        "testOut.csv"
 #define CONFIGF_FILE            "config"
+#define NORMAL                  "0x00"
+#define SEEK                    "0x01"
+#define NORMAL_RETURN           "0x02"
+#define SEEK_RETURN             "0x03"
 
 /* #########################  EXAMPLE PACKET START thx Aaron###########################
  *
@@ -50,6 +54,9 @@
  *  xx = Checksum
  *  CC = END
  */
+/* TODO move to header */
+unsigned int getWordSpecial(unsigned int filePosition,unsigned int file, char option, unsigned int advance);
+unsigned int getWord(unsigned int file);
 
 int main(int argc, char *argv[]){
 
@@ -58,7 +65,7 @@ int main(int argc, char *argv[]){
 	const unsigned char SBIT0 = 0x01; /* 1st bit = 1   Payload Type */
 	const unsigned char SBIT1 = 0x02; /* 2nd bit = 2   Ack valid and or required*/
 	const unsigned char SBIT2 = 0x04; /* 3rd bit = 4   Ack type (-ve/+ve)*/
-	const unsigned char SBIT3 = 0x08; /* 4th bit = 8   Has Address */
+	const unsigned char SBIT3 = 0x08; /* 4th bit = 8   Has Address is actually Has Length*/ /* TODO findout why this doesnt match the protocol docs */
 	const unsigned char SBIT4 = 0x10; /* 5th bit = 16  Has Length */
 	const unsigned char SBIT5 = 0x20; /* 6th bit = 32  FirmWare specific */
 	const unsigned char SBIT6 = 0x40; /* 7th bit = 64  FirmWare specific */
@@ -66,6 +73,7 @@ int main(int argc, char *argv[]){
 
 	/* statics */
 	static char packetBuffer[MEGABYTE];
+	static char payloadBuffer[MEGABYTE];
 
 	/* Statistic collection variables */
 	/* TODO move to struct */
@@ -88,6 +96,8 @@ int main(int argc, char *argv[]){
 	unsigned int startBytesFound = 0;
 	unsigned int packetsWithLength = 0;
 	unsigned int payloadLength = 0;
+	unsigned int correctPacketLength = 0;
+	unsigned int incorrectPacketLength = 0;
 
 	/* Loop and state variables */
 	unsigned char currentCharacter = 0;
@@ -142,17 +152,34 @@ int main(int argc, char *argv[]){
 			nextIsHeaderID = 1; /* we are expecting the next char to be the headerID(byte) */
 		}else if ((currentCharacter != START_BYTE) && nextIsHeaderID){ /* if our packet header says there's a length calculate it */
 			      if (currentCharacter && SBIT4){ /* if there is a payload length flag find the length */
-			    	  headerID = currentCharacter | SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
-			    	  if (headerID == SBIT4){  /* TODO build switch case for all IDs */
+			    	  headerID = currentCharacter;// TODO FIX returns 24 for some reason | SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
+			    	  if (headerID == SBIT3){  /* TODO build switch case for all IDs */
+			    		  /* TODO add checksum checking which should come right before the stop byte */
+			    		  unsigned char bufferChar = 0;
+			    		  unsigned int i = 0;
 			    		  char junk = fgetc(inputFile);
 			    		  junk = fgetc(inputFile);  /* TODO do this the correct way with fseek maybe */
-			    		  char high = fgetc(inputFile);
-			    		  char low = fgetc(inputFile);
-			    		  payloadLength = ((int)high << 8) + low;
-			    		 // printf("\nLength is -> %d",payloadLength);
+			    		  payloadLength = getWord(inputFile);
+			    	//	  printf("\nLength is -> %d",payloadLength);
+			    		  while (i < payloadLength){
+			    			  bufferChar = fgetc(inputFile);
+			    			  payloadBuffer[i] = bufferChar;
+			    			  printf("\n char %d",bufferChar);
+
+			    			  i++;
+			    			  printf("\n count is %d",i);
+			    			  junk = getchar();
+			    		  }
+                          if(bufferChar == STOP_BYTE ){
+                        	  correctPacketLength++;
+                        	//  junk = getchar();
+                          } else if (bufferChar != STOP_BYTE){
+                        	  incorrectPacketLength++;
+                        	//  junk = getchar();
+                          }
 			    		  packetsWithLength++;
 			    	  }
-			    	 // printf("\n HeaderID is %d",headerID);
+			    	//  printf("\n HeaderID is %d",headerID);
 			    	  nextIsHeaderID = 0;
 			      }
 			//
@@ -161,11 +188,40 @@ int main(int argc, char *argv[]){
 	//		packetPosition++;
 	//	}
 	}
-	printf("\n           Bytes In File -> %d",currentCharacterCount);
-    printf("\n      Packet Start Bytes -> %d",startBytesFound);
-    printf("\n   Packets with HasLength -> %d",packetsWithLength);
-    printf("\nDouble Start Bytes Found -> %d",doubleStartByteOccurances);
+    printf("\n Conents of Payload Buffer %s", payloadBuffer);
+    printf("\n            Packets with Good Payload -> %d",correctPacketLength);
+    printf("\n Packets With Bad Payload Or Checksum -> %d",incorrectPacketLength);
+	printf("\n                        Bytes In File -> %d",currentCharacterCount);
+    printf("\n                   Packet Start Bytes -> %d",startBytesFound);
+    printf("\n               Packets with HasLength -> %d",packetsWithLength);
+    printf("\n             Double Start Bytes Found -> %d",doubleStartByteOccurances);
     printf("\n");
 	return 0;
 }
 
+unsigned int getWordSpecial(unsigned int filePosition,unsigned int file, char option, unsigned int advance){
+    unsigned int savedPosition = filePosition;
+    unsigned char low = 0;
+    unsigned char high = 0;
+    unsigned int word = 0;
+    if (option == NORMAL){
+    	 high = fgetc(file);
+    	 low = fgetc(file);
+    	 word = ((int)high << 8) + low;
+    }
+    if(option == NORMAL_RETURN){
+    //	ungetc(file);
+   // 	ungetc(file);
+    }
+	return word;
+}
+
+unsigned int getWord(unsigned int file){
+	unsigned int word = 0;
+	unsigned char low = 0;
+	unsigned char high = 0;
+	high = fgetc(file);
+	low = fgetc(file);
+	word = ((int)high << 8) + low;
+	return word;
+}
