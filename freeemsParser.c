@@ -108,6 +108,7 @@ int main(int argc, char *argv[]){
 	unsigned int inFileLength = 0;
 	unsigned char nextIsHeaderID = 0;
 	unsigned char headerID = 0;
+	unsigned char unescapeNext = 0;
 
 
 	FILE *inputFile;
@@ -143,13 +144,24 @@ int main(int argc, char *argv[]){
 		currentCharacter = fgetc(inputFile);
 		currentCharacterCount++;
 		if (currentCharacter == START_BYTE){
-			if((currentCharacter == START_BYTE) && insidePacket){
-			  doubleStartByteOccurances++;
+		//	if((currentCharacter == START_BYTE) && insidePacket){
+		//	  doubleStartByteOccurances++;
+		//	}
+			char escapePair0 = 0;
+			char escapePair1 = 0;
+			escapePair0 = fgetc(inputFile);
+			escapePair1 = fgetc(inputFile);
+			if ((escapePair0 == ESCAPE_BYTE) && (escapePair1 == ESCAPED_START_BYTE)){
+				////////////////////////
+
+			}else {
+				fseek(inputFile,-2,SEEK_CUR);
+				insidePacket = 1;
+				packetPosition = 0;
+				startBytesFound++;
+				nextIsHeaderID = 1;
 			}
-			insidePacket = 1;
-			packetPosition = 0;
-			startBytesFound++;
-			nextIsHeaderID = 1; /* we are expecting the next char to be the headerID(byte) */
+		    /* we are expecting the next char to be the headerID(byte) */
 		}else if ((currentCharacter != START_BYTE) && nextIsHeaderID){ /* if our packet header says there's a length calculate it */
 			      if (currentCharacter && SBIT4){ /* if there is a payload length flag find the length */
 			    	  headerID = currentCharacter;// TODO FIX returns 24 for some reason | SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
@@ -161,11 +173,10 @@ int main(int argc, char *argv[]){
 			    		  junk = fgetc(inputFile);  /* TODO do this the correct way with fseek maybe */
 			    		  payloadLength = getWord(inputFile);
 			    	//	  printf("\nLength is -> %d",payloadLength);
-			    		  while (i < payloadLength){
+			    		  while (insidePacket){
 			    			  bufferChar = fgetc(inputFile);
-			    			  payloadBuffer[i] = bufferChar;
-			    			  printf("\n char %d",bufferChar);
-
+			    			//  payloadBuffer[i] = bufferChar;
+			    			  printf("\n char %x",bufferChar);
 			    			  i++;
 			    			  printf("\n count is %d",i);
 			    			  junk = getchar();
