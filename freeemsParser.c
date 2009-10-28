@@ -98,6 +98,7 @@ int main(int argc, char *argv[]){
 	unsigned int payloadLength = 0;
 	unsigned int correctPacketLength = 0;
 	unsigned int incorrectPacketLength = 0;
+	unsigned int corruptPackets = 0;
 
 	/* Loop and state variables */
 	unsigned char currentCharacter = 0;
@@ -165,7 +166,7 @@ int main(int argc, char *argv[]){
 		}else if ((currentCharacter != START_BYTE) && nextIsHeaderID){ /* if our packet header says there's a length calculate it */
 			      if (currentCharacter && SBIT4){ /* if there is a payload length flag find the length */
 			    	  headerID = currentCharacter;// TODO FIX returns 24 for some reason | SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
-			    	  if (headerID == SBIT3){  /* TODO build switch case for all IDs */
+			    	  if (headerID == SBIT3){  /* TODO build switch case for all IDs AND escapebytes */
 			    		  /* TODO add checksum checking which should come right before the stop byte */
 			    		  unsigned char bufferChar = 0;
 			    		  unsigned int i = 0;
@@ -175,28 +176,40 @@ int main(int argc, char *argv[]){
 			    	//	  printf("\nLength is -> %d",payloadLength);
 			    		  while (insidePacket){
 			    			  bufferChar = fgetc(inputFile);
-			    			  if(bufferChar == ESCAPED_ESCAPE_BYTE){
-
-			    			  }else if(bufferChar == ESCAPED_START_BYTE){
-
-			    			  }else if(bufferChar == ESCAPED_STOP_BYTE){
-
-			    			  }else {
-			    				  payloadBuffer[i] = bufferChar;
-			    				  i++;
+			    			  char escapedByte = 0;
+			    			  char escapePair = 1;
+			    			  if(bufferChar == ESCAPE_BYTE){
+			    			    /*All packets start with STX, and end with ETX. Should any of STX, ETX or ESC occur within the
+			    				  packet contents (including the header and checksum), it must be “escaped”, with a preceding
+			    				  ESC byte and the byte itself XOR'ed with the value 0xFF. This will yield the following easy to
+			    				  recognise pairs in the stream : */
+                                 escapedByte = fgetc(inputFile);
+                                 escapePair = fgetc(inputFile);
+                                 if((escapedByte == ESCAPE_BYTE) && (escapePair == ESCAPED_ESCAPE_BYTE)){
+                                	 escapedEscapeBytesFound++;
+                                	 payloadBuffer[i] = escapedByte;
+                                	 i++;
+                                 }else if((escapedByte == START_BYTE) && (escapePair == ESCAPED_START_BYTE)){
+                                	 escapedStartBytesFound++;
+                                	 payloadBuffer[i] = escapedByte;
+                                	 i++;
+                                 }else if((escapedByte == STOP_BYTE) && (escapePair == ESCAPED_STOP_BYTE)){
+                                	 escapedStartBytesFound++;
+                                  	 payloadBuffer[i] = escapedByte;
+                                   	 i++;
 			    			  }
 			    			  //  ;
 			    			  printf("\n char %x",bufferChar);
 			    			  printf("\n count is %d",i);
 			    			  junk = getchar();
+			    		  }else if((bufferChar == START_BYTE) || (bufferChar == STOP_BYTE)){
+		    				  fseek(inputFile, -2,SEEK_CUR);
+		    				  corruptPackets++;
+		    				  insidePacket = 0;
+			    		  }else {
+			    			  payloadBuffer[i] = bufferChar;
 			    		  }
-                          if(bufferChar == STOP_BYTE ){
-                        	  correctPacketLength++;
-                        	//  junk = getchar();
-                          } else if (bufferChar != STOP_BYTE){
-                        	  incorrectPacketLength++;
-                        	//  junk = getchar();
-                          }
+			    	  }
 			    		  packetsWithLength++;
 			    	  }
 			    	//  printf("\n HeaderID is %d",headerID);
