@@ -175,9 +175,18 @@ int main(int argc, char *argv[]){
 			    	//	  printf("\nLength is -> %d",payloadLength);
 			    		  while (insidePacket){
 			    			  bufferChar = fgetc(inputFile);
-			    			//  payloadBuffer[i] = bufferChar;
+			    			  if(bufferChar == ESCAPED_ESCAPE_BYTE){
+
+			    			  }else if(bufferChar == ESCAPED_START_BYTE){
+
+			    			  }else if(bufferChar == ESCAPED_STOP_BYTE){
+
+			    			  }else {
+			    				  payloadBuffer[i] = bufferChar;
+			    				  i++;
+			    			  }
+			    			  //  ;
 			    			  printf("\n char %x",bufferChar);
-			    			  i++;
 			    			  printf("\n count is %d",i);
 			    			  junk = getchar();
 			    		  }
