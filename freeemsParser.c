@@ -95,6 +95,7 @@ int main(int argc, char *argv[]){
 	unsigned int packetPosition = 0;
 	unsigned int startBytesFound = 0;
 	unsigned int packetsWithLength = 0;
+	unsigned int packetsWithoutLength = 0;
 	unsigned int payloadLength = 0;
 	unsigned int correctPacketLength = 0;
 	unsigned int incorrectPacketLength = 0;
@@ -154,7 +155,7 @@ int main(int argc, char *argv[]){
 			escapePair0 = fgetc(inputFile);
 			escapePair1 = fgetc(inputFile);
 			if ((escapePair0 == ESCAPE_BYTE) && (escapePair1 == ESCAPED_START_BYTE)){
-				falseStarts++;
+				faseStarts++;
 
 			}else {
 				fseek(inputFile,-2,SEEK_CUR);
@@ -165,9 +166,10 @@ int main(int argc, char *argv[]){
 			}
 		    /* we are expecting the next char to be the headerID(byte) */
 		}else if ((currentCharacter != START_BYTE) && nextIsHeaderID){ /* if our packet header says there's a length calculate it */
-			      if (currentCharacter && SBIT4){ /* if there is a payload length flag find the length */
+			     nextIsHeaderID = 0;
+			     if (currentCharacter && SBIT4){ /* if there is a payload length flag find the length */
 			    	  headerID = currentCharacter;// TODO FIX returns 24 for some reason | SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
-			    	  if (headerID == SBIT3){  /* TODO build switch case for all IDs AND escapebytes */
+			    	  if (headerID == SBIT3){  /* TODO build switch case for all IDs */
 			    		  /* TODO add checksum checking which should come right before the stop byte */
 			    		  unsigned char bufferChar = 0;
 			    		  unsigned int i = 0;
@@ -175,54 +177,71 @@ int main(int argc, char *argv[]){
 			    		  junk = fgetc(inputFile);  /* TODO do this the correct way with fseek maybe */
 			    		  payloadLength = getWord(inputFile);
 			    		  printf("\nLength is -> %d",payloadLength);
-			    		  while (insidePacket){
+			    		  while (insidePacket && (i <= payloadLength)){
 			    			  bufferChar = fgetc(inputFile);
+			    			  currentCharacterCount++;
 			    			  char escapedByte = 0;
 			    			  char escapePair = 1;
+			    			  char falseEscape = 1;
 			    			  if(bufferChar == ESCAPE_BYTE){
 			    			    /*All packets start with STX, and end with ETX. Should any of STX, ETX or ESC occur within the
 			    				  packet contents (including the header and checksum), it must be “escaped”, with a preceding
 			    				  ESC byte and the byte itself XOR'ed with the value 0xFF. This will yield the following easy to
 			    				  recognise pairs in the stream : */
-                                 escapedByte = fgetc(inputFile);
-                                 escapePair = fgetc(inputFile);
-                                 if((escapedByte == ESCAPE_BYTE) && (escapePair == ESCAPED_ESCAPE_BYTE)){
+                                 falseEscape = 1;
+			    				 escapedByte = fgetc(inputFile);
+			    				 currentCharacterCount++;
+			    				 escapePair = fgetc(inputFile);
+			    				 currentCharacterCount++;
+			    				 if((escapedByte == ESCAPE_BYTE) && (escapePair == ESCAPED_ESCAPE_BYTE)){
                                 	 escapedEscapeBytesFound++;
                                 	 payloadBuffer[i] = escapedByte;
+                                	 falseEscape = 0;
                                 	 i++;
                                  }else if((escapedByte == START_BYTE) && (escapePair == ESCAPED_START_BYTE)){
                                 	 escapedStartBytesFound++;
                                 	 payloadBuffer[i] = escapedByte;
+                                	 falseEscape = 0;
                                 	 i++;
                                  }else if((escapedByte == STOP_BYTE) && (escapePair == ESCAPED_STOP_BYTE)){
                                 	 escapedStartBytesFound++;
                                   	 payloadBuffer[i] = escapedByte;
-                                   	 i++;
+                                   	 falseEscape = 0;
+                                  	 i++;
+			    			  }else if ((bufferChar == ESCAPE_BYTE) && falseEscape){
+			    				  fseek(inputFile, -2,SEEK_CUR);
+			    				  currentCharacterCount--;
+			    				  currentCharacterCount--;
+			    				  corruptPackets++;
+			    				  insidePacket = 0;
 			    			  }
 			    			  //  ;
-			    			  printf("\n char %x",bufferChar);
-			    			  printf("\n count is %d",i);
-			    			  junk = getchar();
-			    		  }else if((bufferChar == START_BYTE) || (bufferChar == STOP_BYTE) || (bufferChar == ESCAPE_BYTE)){
-		    				  fseek(inputFile, -2,SEEK_CUR);
+			    			//  printf("\n char %x",bufferChar);
+			    			//  printf("\n count is %d",i);
+			    			//  junk = getchar();
+			    		  }else if(bufferChar == START_BYTE){
 		    				  corruptPackets++;
 		    				  insidePacket = 0;
 			    		  }else if(insidePacket){
 			    			  payloadBuffer[i] = bufferChar;
+			    			  i++;
 			    		  }
-			    	  }
+			    	   }
 			    		  packetsWithLength++;
 			    	  }
-			    	//  printf("\n HeaderID is %d",headerID);
-			    	  nextIsHeaderID = 0;
+			    	 // printf("\n HeaderID is %d",headerID);
+
+			      } else {
+			    	  packetsWithoutLength++;
 			      }
-			//
+
 			}
 	//	if (insidePacket){
 	//		packetPosition++;
 	//	}
 	}
-    printf("\n Conents of Payload Buffer %s", payloadBuffer);
+ //   printf("\n            Conents of Payload Buffer %s", payloadBuffer);
+    printf("\n               Packets WithoutPayload -> %d",packetsWithoutLength);
     printf("\n            Packets with Good Payload -> %d",correctPacketLength);
     printf("\n Packets With Bad Payload Or Checksum -> %d",incorrectPacketLength);
 	printf("\n                        Bytes In File -> %d",currentCharacterCount);

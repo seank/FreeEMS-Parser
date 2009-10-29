@@ -35,6 +35,13 @@
 #define ESCAPED_START_BYTE		0x55
 #define ESCAPED_STOP_BYTE		0x33
 
+#define OUT_FILE_EXTENSION	    ".csv"
+#define END_OF_STRING           0x00
+#define MEGABYTE                0x100000 /* 1 megabyte in hex */
+#define DEFAULT_FILE_IN         "test.bin"
+#define DEFAULT_FILE_OUT        "testOut.csv"
+#define CONFIGF_FILE            "config"
+
 
 /* TODO split into functions? */
 int main( int argc, char *argv[] ){
