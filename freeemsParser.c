@@ -102,6 +102,7 @@ int main(int argc, char *argv[]){
 	unsigned int incorrectPacketLength = 0;
 	unsigned int corruptPackets = 0;
 	unsigned int faseStarts = 0;
+	unsigned int unknownHeader = 0;
 
 	/* Loop and state variables */
 	unsigned char currentCharacter = 0;
@@ -165,6 +166,7 @@ int main(int argc, char *argv[]){
 				packetPosition = 0;
 				startBytesFound++;
 				nextIsHeaderID = 1;
+				printf("\n new start found");
 			}
 		    /* we are expecting the next char to be the headerID(byte) */
 		}else if ((currentCharacter != START_BYTE) && nextIsHeaderID){ /* if our packet header says there's a length calculate it */
@@ -175,12 +177,18 @@ int main(int argc, char *argv[]){
 			    		  /* TODO add checksum checking which should come right before the stop byte */
 			    		  unsigned char bufferChar = 0;
 			    		  unsigned int bufferIndex = 0;
-			    		  char junk = fgetc(inputFile);
-			    		  junk = fgetc(inputFile);  /* TODO do this the correct way with fseek maybe */
+			              fseek(inputFile,2,SEEK_CUR);
+			              currentCharacterCount += 2;
+			    	      printf("\n count %d",currentCharacterCount);
+			    		  printf("\n character %d",currentCharacter);
+			    		  char junk = getchar();
 			    		  payloadLength = getWord(inputFile);
 			    	//	  printf("\nLength is -> %d",payloadLength);
 			    		  while (insidePacket){
+			    			  unsigned char test2 = payloadBuffer[bufferIndex];
 			    			  bufferChar = fgetc(inputFile);
+			    			  printf("\n test out %x",test2);
+
 			    			  currentCharacterCount++;
 			    			  unsigned char escapedByte = 0;
 			    			  unsigned char escapePair = 1;
@@ -230,7 +238,7 @@ int main(int argc, char *argv[]){
 			    			  unsigned char checkSum = payloadBuffer[bufferIndex];
 			    			  unsigned char calculatedCheckSum = calcCheckSum(payloadBuffer,bufferIndex);
 			    			  printf("\n buffer size %d",bufferIndex);
-			    			  char pause = getchar();
+			    			//  char pause = getchar();
 			    			  if ( checkSum == calculatedCheckSum){
 			    				  printf("\n good sum found %x",checkSum);
 			    			 }else {
@@ -246,9 +254,9 @@ int main(int argc, char *argv[]){
 			    	 // printf("\n HeaderID is %d",headerID);
 
 			      } else {
-			    	  packetsWithoutLength++;
-			    	  printf("\n Unprovisioned HeaderID, terminating");
-			    	  return 1;
+			    	  unknownHeader++;
+			    	  printf("\n Unprovisioned HeaderID, terminating press any key to continune");
+			    	  char junk = getchar();
 			      }
 			     }
 
