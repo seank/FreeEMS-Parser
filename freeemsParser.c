@@ -99,6 +99,7 @@ int main(int argc, char *argv[]){
 	unsigned int correctPacketLength = 0;
 	unsigned int incorrectPacketLength = 0;
 	unsigned int corruptPackets = 0;
+	unsigned int faseStarts = 0;
 
 	/* Loop and state variables */
 	unsigned char currentCharacter = 0;
@@ -153,7 +154,7 @@ int main(int argc, char *argv[]){
 			escapePair0 = fgetc(inputFile);
 			escapePair1 = fgetc(inputFile);
 			if ((escapePair0 == ESCAPE_BYTE) && (escapePair1 == ESCAPED_START_BYTE)){
-				////////////////////////
+				falseStarts++;
 
 			}else {
 				fseek(inputFile,-2,SEEK_CUR);
@@ -173,7 +174,7 @@ int main(int argc, char *argv[]){
 			    		  char junk = fgetc(inputFile);
 			    		  junk = fgetc(inputFile);  /* TODO do this the correct way with fseek maybe */
 			    		  payloadLength = getWord(inputFile);
-			    	//	  printf("\nLength is -> %d",payloadLength);
+			    		  printf("\nLength is -> %d",payloadLength);
 			    		  while (insidePacket){
 			    			  bufferChar = fgetc(inputFile);
 			    			  char escapedByte = 0;
@@ -202,11 +203,11 @@ int main(int argc, char *argv[]){
 			    			  printf("\n char %x",bufferChar);
 			    			  printf("\n count is %d",i);
 			    			  junk = getchar();
-			    		  }else if((bufferChar == START_BYTE) || (bufferChar == STOP_BYTE)){
+			    		  }else if((bufferChar == START_BYTE) || (bufferChar == STOP_BYTE) || (bufferChar == ESCAPE_BYTE)){
 		    				  fseek(inputFile, -2,SEEK_CUR);
 		    				  corruptPackets++;
 		    				  insidePacket = 0;
-			    		  }else {
+			    		  }else if(insidePacket){
 			    			  payloadBuffer[i] = bufferChar;
 			    		  }
 			    	  }

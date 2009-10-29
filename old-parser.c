@@ -25,9 +25,7 @@
 
 
 #include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <stdlib.h>
+
 
 /* Special byte definitions */
 #define ESCAPE_BYTE	0xBB
@@ -36,48 +34,26 @@
 #define ESCAPED_ESCAPE_BYTE		0x44
 #define ESCAPED_START_BYTE		0x55
 #define ESCAPED_STOP_BYTE		0x33
-#define PACKET_SIZE				1024   /* 1024 bytes */
-#define OUT_FILE_EXTENSION	    ".csv"
-#define END_OF_STRING           0x00
-#define MEGABYTE                0x100000 /* 1 megabyte in hex */
 
 
 /* TODO split into functions? */
-
-/* TODO move to header */
-int addCharToString(char string[], char c);
-int stringToFile(char string[], int *outFile);
-
 int main( int argc, char *argv[] ){
-	static packetBuffer[MEGABYTE];
 	if(argc == 1){
-//	if(argc == 5){
-	puts("No argument supplied!! Please supply a file to parse.");
-	}else if(argc == 2){  /* was 2 */
+		puts("No argument supplied!! Please supply a file to parse.");
+	}else if(argc == 2){
 		FILE *inputFile;
-	//	inputFile = fopen(argv[1], "rb");
-        inputFile = fopen("slc.mountain.starting.near.top.bin","rb");
+		inputFile = fopen(argv[1], "rb");
+
 		/* Could not open file */
 		if(inputFile == NULL){
 			printf("Error opening file %s, please check the name and try again!\n", argv[1]);
 			return 1;
 		}
-        /* generate outFile name and open it for writing*/
-		FILE *outputFile;
-		char outFileName[50];
-        strcpy(outFileName,argv[1]);
-        strcat(outFileName,OUT_FILE_EXTENSION);
-        outputFile = fopen(outFileName,"w");
-        if(outputFile == NULL){
-        	printf("\nError opening output file %s",outFileName);
-        	return 1;
-        }
-        char fieldName[25];
-        fseek(inputFile, 0L, SEEK_END);
+
+		fseek(inputFile, 0L, SEEK_END);
 		int length = ftell(inputFile);
 		rewind(inputFile);
 		printf("The length of file %s is %u\n\n", argv[1], length);
-
 		printf("Attempting to parse file...\n\n");
 
 		/* Statistic collection variables */
@@ -102,7 +78,6 @@ int main( int argc, char *argv[] ){
 		unsigned char checksum = 0;
 		unsigned char lastChar = 0;
 		unsigned int currentPacketLength = 0;
-		unsigned int bufferIndex = 0;
 
 		/* Iterate through the file char at a time */
 		while(processed < length){
@@ -111,35 +86,10 @@ int main( int argc, char *argv[] ){
 
 			/* Look for a start byte to indicate a new packet */
 			if(character == START_BYTE){
-
 				/* If we are had already found a start byte */
 				if(insidePacket){
 					/* Increment the counter */
 					startsInsidePacket++;
-
-					long int currentFilePosition = ftell(inputFile);
-					/* TODO Move this to a function/add structure */
-					long int newPOS = currentFilePosition + 27 ; /* 27 is the high byte of the rpm */
-				    fseek(inputFile,newPOS,SEEK_SET);
-				    int RPMHiByte = (int) fgetc(inputFile);
-				    int RPMLowByte = (int) fgetc(inputFile);
-				    fseek(inputFile,currentFilePosition,SEEK_SET); /* go back to start of packet */
-				    float RPM = ((RPMHiByte << 8)  + RPMLowByte) / 2;
-					printf("\n RPM is -> %f",RPM);
-					printf("\n LowByte is -> %d",RPMLowByte);
-					printf("\n HighByte is -> %d",RPMHiByte);
-					char RPMChars[80];
-					sprintf(RPMChars,"%f",RPM);
-				    printf("\n RPMChars -> %s"),RPMChars;
-				    int i;
-				    char outChar;
-				    for (i=0;(outChar = RPMChars[i]) != END_OF_STRING;i++){
-				    	fputc(outChar,outputFile);
-				    }
-					char delimiter = '\n';
-					fputc(delimiter,outputFile);
-
-
 					if(currentPacketLength == 0){
 						doubleStartByteOccurances++;
 //						printf("Double start byte occurred following packet number %u\n", packets);
@@ -199,7 +149,6 @@ int main( int argc, char *argv[] ){
 						badChecksums++;
 						printf("Packet number %u ending of length %u at char number %u failed checksum! Received %u Calculated %u\n", packets, currentPacketLength, processed, lastChar, checksum);
 					}else{
-
 						goodChecksums++;
 //						printf("Packet number %u ending of length %u at char number %u checked out OK! Received %u Calculated %u\n", packets, currentPacketLength, processed, lastChar, checksum);
 					}
@@ -243,23 +192,5 @@ int main( int argc, char *argv[] ){
 		/* Subtract one to eliminate command name. */
 		printf("Wrong number of arguments!! Was %u should be 1...\n", argc - 1);
 	}
-
 	return 0; // non-zero = error
-}
-
-int addCharToString(char string[], char c){
-	int stringEnd;
-	stringEnd = strlen(string);
-	string[stringEnd] = c;
-	string[++stringEnd] = END_OF_STRING;   /* add new EOF marker */
-	return 0;
-}
-
-int stringToFile(char string[], int *outFile){
-     int i;
-     char c;
-	 for(i=0;(c=string[i])!= END_OF_STRING;i++){
-		fputc(c,outFile);
-	 }
-     return 0;
 }
