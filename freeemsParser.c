@@ -58,6 +58,10 @@
 unsigned int getWordSpecial(unsigned int filePosition,unsigned int file, char option, unsigned int advance);
 unsigned int getWord(unsigned int file);
 unsigned char calcCheckSum(unsigned char buffer[], unsigned int size);
+unsigned char writeOutBuffer(int outfile);
+
+/*********************  STATICS **********************************/
+static char payloadBuffer[MEGABYTE];
 
 int main(int argc, char *argv[]){
 
@@ -74,7 +78,7 @@ int main(int argc, char *argv[]){
 
 	/* statics */
 //	static char packetBuffer[MEGABYTE];
-	char payloadBuffer[MEGABYTE];
+
 
 	/* Statistic collection variables */
 	/* TODO move to struct */
@@ -264,6 +268,7 @@ int main(int argc, char *argv[]){
 			    		  }else if(insidePacket){
 			    			    payloadBuffer[bufferIndex] = currentCharacter;
 			    			    bufferIndex++;
+			    			    writeOutBuffer(outputFile);
 			    	   }
 			    		  packetsWithLength++;
 			    		  unsigned char test2 = payloadBuffer[--bufferIndex];
@@ -337,3 +342,14 @@ unsigned char calcCheckSum(unsigned char buffer[], unsigned int size){
 	}
 	return checksum;
 }
+
+unsigned char writeOutBuffer(int outfile){
+	unsigned int test = 16550;
+	unsigned char temp[100000]= {0};
+    // get spec value from payload to print to file
+	sprintf(temp,"%u",test);
+    fputs(temp, outfile);
+	fputc(',',outfile);
+	return 0;
+}
+
