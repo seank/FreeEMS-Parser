@@ -1,4 +1,4 @@
-/* FreeEMS - the open source engine management system
+j/* FreeEMS - the open source engine management system
  *
  * Copyright 2009 Sean Keys
  *
@@ -55,10 +55,9 @@
  *  CC = END
  */
 /* TODO move to header */
-unsigned int getWordSpecial(unsigned int filePosition,unsigned int file, char option, unsigned int advance);
-unsigned int getWord(unsigned int file);
 unsigned char calcCheckSum(unsigned char buffer[], unsigned int size);
-unsigned char writeOutBuffer(int outfile);
+unsigned char writeOutBuffer(FILE *outputFile);
+unsigned int getBufferWord(unsigned int hiByte);
 
 /*********************  STATICS **********************************/
 static char payloadBuffer[MEGABYTE];
@@ -163,9 +162,11 @@ int main(int argc, char *argv[]){
 			escapePair1 = fgetc(inputFile);
 			if ((escapePair0 == ESCAPE_BYTE) && (escapePair1 == ESCAPED_START_BYTE)){
 				faseStarts++;
+				currentCharacterCount++;
+				currentCharacterCount++;
 
 			}else {
-				fseek(inputFile,-2,SEEK_CUR);
+				fseek(inputFile,-2,SEEK_CUR); /* start is legit roll the file back */
 				insidePacket = 1;
 				packetPosition = 0;
 				startBytesFound++;
@@ -203,7 +204,7 @@ int main(int argc, char *argv[]){
 			    	      payloadLength = ((int) high << 8) + low;
 			    	//	  payloadLength = getWord(inputFile); /* cannot use or checksum will be wrong */
 			    	//	  printf("\nLength is -> %d",payloadLength);
-			    		  unsigned char junk = getchar();
+			    	//	  unsigned char junk = getchar();
 			    		  while (insidePacket){
 			    			  printf("\n current checksum -> %d",checkSumByte);
 			    			  currentCharacter = fgetc(inputFile);
@@ -262,13 +263,15 @@ int main(int argc, char *argv[]){
 			    			  if ( checkSum == checkSumByte){
 			    				  printf("\n good sum found %x",checkSum);
 			    			 }else {
+			    				 writeOutBuffer(outputFile);
+			    				// fputc('j',outputFile);
 			    				 printf("\n   bad sum found buffer %x ",checkSum);
 			    				 printf("\n bad sum calced %x ",checkSumByte);
 			    			 }
 			    		  }else if(insidePacket){
 			    			    payloadBuffer[bufferIndex] = currentCharacter;
 			    			    bufferIndex++;
-			    			    writeOutBuffer(outputFile);
+
 			    	   }
 			    		  packetsWithLength++;
 			    		  unsigned char test2 = payloadBuffer[--bufferIndex];
@@ -305,33 +308,6 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-unsigned int getWordSpecial(unsigned int filePosition,unsigned int file, char option, unsigned int advance){
-    unsigned int savedPosition = filePosition;
-    unsigned char low = 0;
-    unsigned char high = 0;
-    unsigned int word = 0;
-    if (option == NORMAL){
-    	 high = fgetc(file);
-    	 low = fgetc(file);
-    	 word = ((int)high << 8) + low;
-    }
-    if(option == NORMAL_RETURN){
-    //	ungetc(file);
-   // 	ungetc(file);
-    }
-	return word;
-}
-
-unsigned int getWord(unsigned int file){
-	unsigned int word = 0;
-	unsigned char low = 0;
-	unsigned char high = 0;
-	high = fgetc(file);
-	low = fgetc(file);
-	word = ((int)high << 8) + low;
-	return word;
-}
-
 /* cannot be used against the checksum in the stream because the CS includes escaped pairs */
 unsigned char calcCheckSum(unsigned char buffer[], unsigned int size){
 	printf("\n size %d",size);
@@ -343,13 +319,26 @@ unsigned char calcCheckSum(unsigned char buffer[], unsigned int size){
 	return checksum;
 }
 
-unsigned char writeOutBuffer(int outfile){
-	unsigned int test = 16550;
-	unsigned char temp[100000]= {0};
+unsigned char writeOutBuffer(FILE *outputFile){
+	unsigned int i;
+	unsigned char c;
+	char temp[100]= {0};
     // get spec value from payload to print to file
-	sprintf(temp,"%u",test);
-    fputs(temp, outfile);
-	fputc(',',outfile);
+	unsigned int returnedValue = getBufferWord(26);
+	sprintf(temp,"%u",returnedValue); /* get and format RPM */
+    /* TODO investigate using fputs */
+	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
+		fputc(c, outputFile);
+    }
+	fputc(',',outputFile);
 	return 0;
 }
-
+unsigned int getBufferWord(unsigned int hiByte){
+	unsigned int word = 0;
+	unsigned char low = 0;
+	unsigned char hi = 0;
+	hi = payloadBuffer[hiByte];
+	low = payloadBuffer[++hiByte];
+	word = ((int)hi << 8) + low; /* move our first eight bits to high then add low */
+	return word;
+}
