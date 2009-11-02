@@ -179,19 +179,32 @@ int main(int argc, char *argv[]){
 			    		  /* TODO add checksum checking which should come right before the stop byte */
 			    //		  unsigned char bufferChar = 0;
 			    		  unsigned int bufferIndex = 0;
-			              fseek(inputFile,2,SEEK_CUR);
-			              currentCharacterCount += 2;
-			    	      printf("\n count %d",currentCharacterCount);
+			        //      fseek(inputFile,2,SEEK_CUR); / * cannot skip or checksum will be off */
+			    		  currentCharacter = fgetc(inputFile);
+			    		  currentCharacterCount++;
+			    		  checkSumByte += currentCharacter;
+			    		  currentCharacter = fgetc(inputFile);
+			    		  currentCharacterCount++;
+			    		  checkSumByte += currentCharacter;
+			    		  printf("\n count %d",currentCharacterCount);
 			    		  printf("\n character %d",currentCharacter);
+
 			    	//	  char junk = getchar();
-			    		  payloadLength = getWord(inputFile);
+			    	      unsigned char high = fgetc(inputFile);
+			    	      currentCharacterCount++;
+			    	      checkSumByte += currentCharacter;
+			    	      unsigned char low = fgetc(inputFile);
+			    	      currentCharacterCount++;
+			    	      checkSumByte += currentCharacter;
+			    	      payloadLength = ((int) high << 8) + low;
+			    	//	  payloadLength = getWord(inputFile); /* cannot use or checksum will be wrong */
 			    	//	  printf("\nLength is -> %d",payloadLength);
+			    		  unsigned char junk = getchar();
 			    		  while (insidePacket){
-			    			  unsigned char junk = getchar();
+			    			  printf("\n current checksum -> %d",checkSumByte);
 			    			  currentCharacter = fgetc(inputFile);
 			    			  checkSumByte += currentCharacter;
 			    			  currentCharacterCount++;
-			    			  unsigned char escapedByte = 0;
 			    			  unsigned char escapedPair = 0;
 			    			  unsigned char falseEscape = 1;
 			    			  if(currentCharacter == ESCAPE_BYTE){
@@ -199,7 +212,7 @@ int main(int argc, char *argv[]){
 			    				  packet contents (including the header and checksum), it must be “escaped”, with a preceding
 			    				  ESC byte and the byte itself XOR'ed with the value 0xFF. This will yield the following easy to
 			    				  recognise pairs in the stream : */
-                                 falseEscape = 1;
+                                 falseEscape = 1; /* guilty until proven inocient */
 			    				 escapedPair = fgetc(inputFile);
 			    				 checkSumByte += currentCharacter;
 			    				 currentCharacterCount++;
@@ -236,8 +249,9 @@ int main(int argc, char *argv[]){
                               insidePacket = 0;
 			    			  bufferIndex--; /* the previous byte in the buffer should be the checksum */
 			    			  unsigned char checkSum = payloadBuffer[bufferIndex];
-			    		//	  unsigned char calculatedCheckSum = calcCheckSum(payloadBuffer,bufferIndex);
-			    		//	  unsigned char calculatedCheckSum = 0; //for testing
+			    			  checkSumByte -= checkSum;
+			    			  //	  unsigned char calculatedCheckSum = calcCheckSum(payloadBuffer,bufferIndex);
+			    		      //	  unsigned char calculatedCheckSum = 0; //for testing
 
 			    			  printf("\n buffer size %d",bufferIndex);
 			    			//  char pause = getchar();
@@ -252,7 +266,6 @@ int main(int argc, char *argv[]){
 			    			    bufferIndex++;
 			    	   }
 			    		  packetsWithLength++;
-
 			    		  unsigned char test2 = payloadBuffer[--bufferIndex];
 			    		  printf("\n test out %x",test2);
 			    		  printf("\n bufferIndex -> %d",bufferIndex);
