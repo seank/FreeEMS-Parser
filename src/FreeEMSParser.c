@@ -330,7 +330,32 @@ unsigned char writeOutBuffer(FILE *outputFile){
 	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
 		fputc(c, outputFile);
     }
+	fputc(',',outputFile);
+
+	returnedValue = getBufferWord(8); /* 8 should be the high of map word*/
+	sprintf(temp,"%u",returnedValue); /* get and format RPM */
+	  /* TODO investigate using fputs */
+	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
+			fputc(c, outputFile);
+	    }
+		fputc(',',outputFile);
+
+	returnedValue = getBufferWord(50); /* 50 should be the high of refPW word*/
+	sprintf(temp,"%u",returnedValue); /* get and format RPM */
+			  /* TODO investigate using fputs */
+	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
+		fputc(c, outputFile);
+	   }
+	fputc(',',outputFile);
+
+	returnedValue = getBufferWord(52); /* 8 should be the high of sp1 word*/
+	sprintf(temp,"%u",returnedValue); /* get and format RPM */
+				  /* TODO investigate using fputs */
+	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
+		fputc(c, outputFile);
+	   }
 	fputc('\n',outputFile);
+
 	return 0;
 }
 unsigned int getBufferWord(unsigned int hiByte){
