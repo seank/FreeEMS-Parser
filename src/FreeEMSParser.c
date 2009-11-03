@@ -271,8 +271,8 @@ int main(int argc, char *argv[]){
 			    	   }
 			    		  packetsWithLength++;
 			    		  unsigned char test2 = payloadBuffer[--bufferIndex];
-			    		  printf("\n test out %x",test2);
-			    		  printf("\n bufferIndex -> %d",bufferIndex);
+			 //   		  printf("\n test out %x",test2);
+			 //   		  printf("\n bufferIndex -> %d",bufferIndex);
 			    		  bufferIndex++;
 			    	  }
 			    	 // printf("\n HeaderID is %d",headerID);
@@ -300,7 +300,7 @@ int main(int argc, char *argv[]){
     printf("\n        Packets Without Payload Length -> %d",packetsWithoutLength);
     printf("\n               Packets with HasLength -> %d",packetsWithLength);
     printf("\n            Packets with Good Payload -> %d",correctPacketLength);
-    printf("\n Packets With Bad Payload Or Checksum -> %d",incorrectPacketLength);
+    printf("\n Packets With Bad Payload Length -> %d",incorrectPacketLength);
 	printf("\n                        Bytes In File -> %d",currentCharacterCount);
     printf("\n                  Packet Starts Found -> %d",startBytesFound);
     printf("\n             Double Start Bytes Found -> %d",doubleStartByteOccurances);
