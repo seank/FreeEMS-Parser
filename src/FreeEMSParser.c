@@ -43,6 +43,7 @@
 #define SEEK                    "0x01"
 #define NORMAL_RETURN           "0x02"
 #define SEEK_RETURN             "0x03"
+#define HEADER                  "RPM,MAP"
 
 /* #########################  EXAMPLE PACKET START thx Aaron###########################
  *
@@ -55,12 +56,15 @@
  *  CC = END
  */
 /* TODO move to header */
-unsigned char calcCheckSum(unsigned char buffer[], unsigned int size);
+unsigned char calcCheckSum(unsigned int size);
 unsigned char writeOutBuffer(FILE *outputFile);
 unsigned int getBufferWord(unsigned int hiByte);
+unsigned int writeString(unsigned int value,FILE *outputFile);
+unsigned int writeHeader(FILE *outputFile);
 
 /*********************  STATICS **********************************/
 static char payloadBuffer[MEGABYTE];
+static char wroteHeader = 0;
 
 int main(int argc, char *argv[]){
 
@@ -150,7 +154,10 @@ int main(int argc, char *argv[]){
 	inFileLength = ftell(inputFile);
 	rewind(inputFile);
     while (currentCharacterCount < inFileLength ){
-		currentCharacter = fgetc(inputFile);
+		if (!wroteHeader){
+			writeHeader(outputFile);
+		}
+    	currentCharacter = fgetc(inputFile);
 		currentCharacterCount++;
 		if (currentCharacter == START_BYTE){
 			if(insidePacket){
@@ -168,7 +175,6 @@ int main(int argc, char *argv[]){
 			     nextIsHeaderID = 0;
 			     checkSumByte += currentCharacter;
 			     if (currentCharacter && SBIT4){ /* if there is a payload length flag find the length */
-
 			    	 headerID = currentCharacter;// TODO FIX returns 24 for some reason | SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
 			    	  if (headerID == SBIT3){  /* TODO build switch case for all IDs */
 			    		  /* TODO add checksum checking which should come right before the stop byte */
@@ -183,7 +189,6 @@ int main(int argc, char *argv[]){
 			    		  checkSumByte += currentCharacter;
 			    //		  printf("\n count %d",currentCharacterCount);
 			    //		  printf("\n character %d",currentCharacter);
-
 			    	//	  char junk = getchar();
 			    	      unsigned char high = fgetc(inputFile);
 			    	      currentCharacterCount++;
@@ -198,7 +203,6 @@ int main(int argc, char *argv[]){
 			    		  while (insidePacket){
 			    	//		  printf("\n current checksum -> %d",checkSumByte);
 			    			  currentCharacter = fgetc(inputFile);
-			    			  checkSumByte += currentCharacter;
 			    			  currentCharacterCount++;
 			    	//		  printf("\n byte count -> %d",currentCharacterCount);
 			    			  unsigned char escapedPair = 0;
@@ -210,24 +214,26 @@ int main(int argc, char *argv[]){
 			    				  recognise pairs in the stream : */
                                  falseEscape = 1; /* guilty until proven innocient */
 			    				 escapedPair = fgetc(inputFile);
-			    				 checkSumByte += currentCharacter;
+			    				// checkSumByte += currentCharacter; /* do not use an escape_byte to calc sum */
 			    				 currentCharacterCount++;
-
 			    				 if(escapedPair == ESCAPED_ESCAPE_BYTE){
                                 	 escapedEscapeBytesFound++;
                                 	 payloadBuffer[bufferIndex] = ESCAPE_BYTE;
+                                	 checkSumByte += ESCAPE_BYTE;
                                 	 bufferIndex++;
                                 	 falseEscape = 0;
                                  }else if(escapedPair == ESCAPED_START_BYTE){
                                 	 escapedStartBytesFound++;
                                 	 payloadBuffer[bufferIndex] = START_BYTE;
+                                	 checkSumByte += START_BYTE;
                                 	 bufferIndex++;
                                 	 falseEscape = 0;
                                  }else if(escapedPair == ESCAPED_STOP_BYTE){
                                 	 escapedStopBytesFound++;
                                   	 payloadBuffer[bufferIndex] = STOP_BYTE;
-                                   	 falseEscape = 0;
-                                   	bufferIndex++;
+                                  	checkSumByte += ESCAPED_STOP_BYTE;
+                                  	 falseEscape = 0;
+                                   	 bufferIndex++;
 			    			  }else if ((currentCharacter == ESCAPE_BYTE) && falseEscape){
 			    				  fseek(inputFile, -1,SEEK_CUR);
 			    				  currentCharacterCount--;
@@ -255,16 +261,18 @@ int main(int argc, char *argv[]){
 			    				  printf("\n good sum found %x",checkSum);
 			    				  goodChecksums++;
 			    				  writeOutBuffer(outputFile);
-
 			    			 }else {
 			    				 corruptPackets++;
 			    				 // fputc('j',outputFile);
 			    				 printf("\n   bad sum found buffer %x ",checkSum);
 			    				 printf("\n bad sum calced %x ",checkSumByte);
+			    				 printf("\n sum is now -> %d",(calcCheckSum(payloadLength)));
 			    				 writeOutBuffer(outputFile); /* TODO fix checksumming */
+			    		//		 char jjunk = getchar();
 
 			    			 }
 			    		  }else if(insidePacket){
+			    			    checkSumByte += currentCharacter;
 			    			    payloadBuffer[bufferIndex] = currentCharacter;
 			    			    bufferIndex++;
 
@@ -300,7 +308,7 @@ int main(int argc, char *argv[]){
     printf("\n        Packets Without Payload Length -> %d",packetsWithoutLength);
     printf("\n               Packets with HasLength -> %d",packetsWithLength);
     printf("\n            Packets with Good Payload -> %d",correctPacketLength);
-    printf("\n Packets With Bad Payload Length -> %d",incorrectPacketLength);
+    printf("\n      Packets With Bad Payload Length -> %d",incorrectPacketLength);
 	printf("\n                        Bytes In File -> %d",currentCharacterCount);
     printf("\n                  Packet Starts Found -> %d",startBytesFound);
     printf("\n             Double Start Bytes Found -> %d",doubleStartByteOccurances);
@@ -308,56 +316,41 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-/* cannot be used against the checksum in the stream because the CS includes escaped pairs */
-unsigned char calcCheckSum(unsigned char buffer[], unsigned int size){
+
+unsigned char calcCheckSum(unsigned int size){
 	printf("\n size %d",size);
 	int i;
 	char checksum = 0;
 	for(i=0;i < size;i++){
-		checksum += buffer[i];
+		checksum += payloadBuffer[i];
 	}
 	return checksum;
 }
 
 unsigned char writeOutBuffer(FILE *outputFile){
-	unsigned int i;
-	unsigned char c;
-	char temp[100]= {0};
-    // get spec value from payload to print to file
-	unsigned int returnedValue = getBufferWord(26); /* 26 should be the high of rpm word*/
-	sprintf(temp,"%u",returnedValue); /* get and format RPM */
-    /* TODO investigate using fputs */
-	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
-		fputc(c, outputFile);
-    }
-	fputc(',',outputFile);
+	unsigned int retrievedValue = 0;
+	retrievedValue = getBufferWord(26); /* get RPM */
+    writeString(retrievedValue,outputFile);
 
-	returnedValue = getBufferWord(8); /* 8 should be the high of map word*/
-	sprintf(temp,"%u",returnedValue); /* get and format RPM */
-	  /* TODO investigate using fputs */
-	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
-			fputc(c, outputFile);
-	    }
-		fputc(',',outputFile);
-
-	returnedValue = getBufferWord(50); /* 50 should be the high of refPW word*/
-	sprintf(temp,"%u",returnedValue); /* get and format RPM */
-			  /* TODO investigate using fputs */
-	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
-		fputc(c, outputFile);
-	   }
-	fputc(',',outputFile);
-
-	returnedValue = getBufferWord(52); /* 8 should be the high of sp1 word*/
-	sprintf(temp,"%u",returnedValue); /* get and format RPM */
-				  /* TODO investigate using fputs */
-	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
-		fputc(c, outputFile);
-	   }
-	fputc('\n',outputFile);
+ //   writeString(26,outputFile); /* RPM */
+ //   writeString(8,outputFile); /* MAP */
+ //   writeString
+    fputc('\n',outputFile); /* terminate end of row with a newline */
 
 	return 0;
 }
+
+unsigned int writeString(unsigned int value,FILE *outputFile){
+	char temp [20] = {0};
+	sprintf(temp,"%u",value); /* get and format RPM */
+	 /* TODO investigate using fputs */
+    fputs(temp,outputFile);
+    fputc(',',outputFile);
+	//	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
+//			fputc(c, outputFile);
+//	   }
+}
+
 unsigned int getBufferWord(unsigned int hiByte){
 	unsigned int word = 0;
 	unsigned char low = 0;
@@ -366,4 +359,11 @@ unsigned int getBufferWord(unsigned int hiByte){
 	low = payloadBuffer[++hiByte];
 	word = ((int)hi << 8) + low; /* move our first eight bits to high then add low */
 	return word;
+}
+
+unsigned int writeHeader(FILE *outputFile){
+    fputs(HEADER,outputFile);
+    fputc('\n',outputFile);
+    wroteHeader = 1;
+    return 0;
 }
