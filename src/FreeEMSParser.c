@@ -43,7 +43,7 @@
 #define SEEK                    "0x01"
 #define NORMAL_RETURN           "0x02"
 #define SEEK_RETURN             "0x03"
-#define HEADER                  "RPM,MAP"
+#define HEADER                  "IAT,CHT,TPS,EGO,MAP,AAP,BRV,MAT,EGO2,IAP,MAF,DMAP,DTPS,RPM,DRPM,DDRPM,LoadMain,VEMain,Lambda,AirFlow,DensityFuel,BasePW,IDT,ETE,TFCTotal,FinalPW,RefPW,sp1,sp2,sp3,sp4,sp5,adc0,adc1,adc2,adc3,adc4,adc5,adc6,adc7,adc8,adc9,adc10,adc11,adc12,adc13,adc14,adc15"
 
 /* #########################  EXAMPLE PACKET START thx Aaron###########################
  *
@@ -55,6 +55,11 @@
  *  xx = Checksum
  *  CC = END
  */
+
+/* Checksum Function
+ * so if you have 0x12 0xBB 0x44 0x35 then the sum is of 0x12 0xCC 0x35
+ */
+
 /* TODO move to header */
 unsigned char calcCheckSum(unsigned int size);
 unsigned char writeOutBuffer(FILE *outputFile);
@@ -313,7 +318,8 @@ int main(int argc, char *argv[]){
     printf("\n                  Packet Starts Found -> %d",startBytesFound);
     printf("\n             Double Start Bytes Found -> %d",doubleStartByteOccurances);
     printf("\n");
-	return 0;
+	printf("\n\n\nThank you for choosing FreeEMS! c. sean keys see contribs for a full list of contributors");
+    return 0;
 }
 
 
@@ -328,9 +334,158 @@ unsigned char calcCheckSum(unsigned int size){
 }
 
 unsigned char writeOutBuffer(FILE *outputFile){
+/*     # Data log packet payload order
+       _structure = [ 'IAT', 'CHT', 'TPS', 'EGO', 'MAP', 'AAP', 'BRV', 'MAT',
+       'EGO2', 'IAP', 'MAF', 'DMAP', 'DTPS', 'RPM', 'DRPM', 'DDRPM',
+       'LoadMain', 'VEMain', 'Lambda', 'AirFlow', 'DensityFuel', 'BasePW',
+       'IDT', 'ETE', 'TFCTotal', 'FinalPW', 'RefPW', 'sp1', 'sp2', 'sp3',
+       'sp4', 'sp5', 'adc0', 'adc1', 'adc2', 'adc3', 'adc4', 'adc5', 'adc6',
+       'adc7', 'adc8', 'adc9', 'adc10', 'adc11', 'adc12', 'adc13', 'adc14',
+       'adc15', ] */
 	unsigned int retrievedValue = 0;
-	retrievedValue = getBufferWord(26); /* get RPM */
+	 /* get IAT */
+	retrievedValue = getBufferWord(0);
+	writeString(retrievedValue,outputFile);
+	 /* get CHT */
+	retrievedValue = getBufferWord(2);
+	writeString(retrievedValue,outputFile);
+	 /* get TPS */
+	retrievedValue = getBufferWord(4);
+	writeString(retrievedValue,outputFile);
+	/* get EGO */
+	retrievedValue = getBufferWord(6);
+	writeString(retrievedValue,outputFile);
+	/* get MAP */
+	retrievedValue = getBufferWord(8);
+	writeString(retrievedValue,outputFile);
+	/* get AAP */
+	retrievedValue = getBufferWord(10);
+	writeString(retrievedValue,outputFile);
+	/* get BRV */
+	retrievedValue = getBufferWord(12);
+	writeString(retrievedValue,outputFile);
+	/* get MAT */
+	retrievedValue = getBufferWord(14);
+	writeString(retrievedValue,outputFile);
+	/* get EGO2 */
+	retrievedValue = getBufferWord(16);
+	writeString(retrievedValue,outputFile);
+	/* get IAP */
+	retrievedValue = getBufferWord(18);
+	writeString(retrievedValue,outputFile);
+	/* get MAF */
+	retrievedValue = getBufferWord(20);
+	writeString(retrievedValue,outputFile);
+	/* get DMAP */
+	retrievedValue = getBufferWord(22);
+	writeString(retrievedValue,outputFile);
+	/* get DTPS */
+	retrievedValue = getBufferWord(24);
+	writeString(retrievedValue,outputFile);
+	/* get RPM */
+	retrievedValue = getBufferWord(26);
     writeString(retrievedValue,outputFile);
+    /* get DRPM */
+    retrievedValue = getBufferWord(28);
+    writeString(retrievedValue,outputFile);
+    /* get DDRPM */
+    retrievedValue = getBufferWord(30);
+    writeString(retrievedValue,outputFile);
+    /* get LoadMain */
+    retrievedValue = getBufferWord(32);
+    writeString(retrievedValue,outputFile);
+    /* get VEMain */
+    retrievedValue = getBufferWord(34);
+    writeString(retrievedValue,outputFile);
+    /* get Lambda */
+    retrievedValue = getBufferWord(36);
+   	writeString(retrievedValue,outputFile);
+   	/* get AirFlow */
+   	retrievedValue = getBufferWord(38);
+   	writeString(retrievedValue,outputFile);
+   	/* get densityFuel */
+   	retrievedValue = getBufferWord(40);
+   	writeString(retrievedValue,outputFile);
+   	/* get BasePW */
+   	retrievedValue = getBufferWord(42);
+   	writeString(retrievedValue,outputFile);
+   	/* get IDT */
+   	retrievedValue = getBufferWord(44);
+   	writeString(retrievedValue,outputFile);
+   	/* get ETE */
+   	retrievedValue = getBufferWord(46);
+   	writeString(retrievedValue,outputFile);
+    /* get TFCTotal */
+	retrievedValue = getBufferWord(48);
+   	writeString(retrievedValue,outputFile);
+   	/* get FinalPW */
+	retrievedValue = getBufferWord(50);
+   	writeString(retrievedValue,outputFile);
+	/* get RefPW */
+   	retrievedValue = getBufferWord(52);
+   	writeString(retrievedValue,outputFile);
+   	/* get sp1 */
+	retrievedValue = getBufferWord(54);
+   	writeString(retrievedValue,outputFile);
+   	/* get sp2 */
+	retrievedValue = getBufferWord(56);
+   	writeString(retrievedValue,outputFile);
+   	/* get sp3 */
+	retrievedValue = getBufferWord(58);
+   	writeString(retrievedValue,outputFile);
+   	/* get sp4 */
+	retrievedValue = getBufferWord(60);
+   	writeString(retrievedValue,outputFile);
+   	/* get sp5 */
+	retrievedValue = getBufferWord(62);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc0 */
+   	retrievedValue = getBufferWord(64);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc1 */
+   	 retrievedValue = getBufferWord(66);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc2 */
+   	retrievedValue = getBufferWord(68);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc3 */
+   	retrievedValue = getBufferWord(70);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc4 */
+   	retrievedValue = getBufferWord(72);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc5 */
+   	retrievedValue = getBufferWord(73);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc6 */
+   	retrievedValue = getBufferWord(74);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc7 */
+   	retrievedValue = getBufferWord(76);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc8 */
+   	retrievedValue = getBufferWord(78);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc9 */
+   	retrievedValue = getBufferWord(80);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc10 */
+   	retrievedValue = getBufferWord(82);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc12 */
+   	retrievedValue = getBufferWord(84);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc13 */
+   	retrievedValue = getBufferWord(86);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc14 */
+    retrievedValue = getBufferWord(88);
+   	writeString(retrievedValue,outputFile);
+   	/* get adc 15 */
+    retrievedValue = getBufferWord(90);
+   	writeString(retrievedValue,outputFile);
+
+    fputc('0',outputFile); /* TODO make program smart enought to exclude the , after the last value */
 
  //   writeString(26,outputFile); /* RPM */
  //   writeString(8,outputFile); /* MAP */
