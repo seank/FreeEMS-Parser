@@ -38,7 +38,7 @@
 #define MEGABYTE                0x100000 /* 1 megabyte in hex */
 #define DEFAULT_FILE_IN         "test.bin"
 #define DEFAULT_FILE_OUT        "testOut.csv"
-#define CONFIGF_FILE            "config"
+#define CONFIGF_FILE            "config.cfg"
 #define NORMAL                  "0x00"
 #define SEEK                    "0x01"
 #define NORMAL_RETURN           "0x02"
@@ -63,8 +63,8 @@
 /* TODO move to header */
 unsigned char calcCheckSum(unsigned int size);
 unsigned char writeOutBuffer(FILE *outputFile);
-unsigned int getBufferWord(unsigned int hiByte);
-unsigned int writeString(unsigned int value,FILE *outputFile);
+unsigned long int getBufferWord(unsigned int hiByte);
+unsigned int writeString(double value,FILE *outputFile);
 unsigned int writeHeader(FILE *outputFile);
 
 /*********************  STATICS **********************************/
@@ -318,7 +318,7 @@ int main(int argc, char *argv[]){
     printf("\n                  Packet Starts Found -> %d",startBytesFound);
     printf("\n             Double Start Bytes Found -> %d",doubleStartByteOccurances);
     printf("\n");
-	printf("\n\n\nThank you for choosing FreeEMS! c. sean keys see contribs for a full list of contributors");
+	printf("\n\n\nThank you for choosing FreeEMS! c. Sean Keys see contribs at diyefi.org for a full list of contributors");
     return 0;
 }
 
@@ -342,9 +342,10 @@ unsigned char writeOutBuffer(FILE *outputFile){
        'sp4', 'sp5', 'adc0', 'adc1', 'adc2', 'adc3', 'adc4', 'adc5', 'adc6',
        'adc7', 'adc8', 'adc9', 'adc10', 'adc11', 'adc12', 'adc13', 'adc14',
        'adc15', ] */
-	unsigned int retrievedValue = 0;
+//	unsigned int retrievedValue = 0;
+	 double retrievedValue = 0.0f;
 	 /* get IAT */
-	retrievedValue = getBufferWord(0);
+	retrievedValue = (getBufferWord(0) / 100) - 273.15;
 	writeString(retrievedValue,outputFile);
 	 /* get CHT */
 	retrievedValue = getBufferWord(2);
@@ -495,9 +496,9 @@ unsigned char writeOutBuffer(FILE *outputFile){
 	return 0;
 }
 
-unsigned int writeString(unsigned int value,FILE *outputFile){
+unsigned int writeString(double value,FILE *outputFile){
 	char temp [20] = {0};
-	sprintf(temp,"%u",value); /* get and format RPM */
+	sprintf(temp,"%f",value); /* get and format RPM */
 	 /* TODO investigate using fputs */
     fputs(temp,outputFile);
     fputc(',',outputFile);
@@ -506,8 +507,8 @@ unsigned int writeString(unsigned int value,FILE *outputFile){
 //	   }
 }
 
-unsigned int getBufferWord(unsigned int hiByte){
-	unsigned int word = 0;
+unsigned long int getBufferWord(unsigned int hiByte){
+	unsigned long int word = 0.0f;
 	unsigned char low = 0;
 	unsigned char hi = 0;
 	hi = payloadBuffer[hiByte];
