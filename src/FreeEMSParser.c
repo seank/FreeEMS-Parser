@@ -291,6 +291,7 @@ int main(int argc, char *argv[]){
 			    	 // printf("\n HeaderID is %d",headerID);
 
 			      } else {
+			    	  corruptPackets++;
 			    	  unknownHeaderIDCount++;
 			    	  printf("\n Unprovisioned HeaderID");
 			    	  insidePacket = 0;
@@ -348,31 +349,31 @@ unsigned char writeOutBuffer(FILE *outputFile){
 	retrievedValue = (getBufferWord(0) / 100) - 273.15;
 	writeString(retrievedValue,outputFile);
 	 /* get CHT */
-	retrievedValue = getBufferWord(2);
+	retrievedValue = (getBufferWord(2) / 100) - 273.15;
 	writeString(retrievedValue,outputFile);
 	 /* get TPS */
-	retrievedValue = getBufferWord(4);
+	retrievedValue = getBufferWord(4) / 640;
 	writeString(retrievedValue,outputFile);
 	/* get EGO */
 	retrievedValue = getBufferWord(6);
 	writeString(retrievedValue,outputFile);
 	/* get MAP */
-	retrievedValue = getBufferWord(8);
+	retrievedValue = getBufferWord(8) / 100;
 	writeString(retrievedValue,outputFile);
 	/* get AAP */
-	retrievedValue = getBufferWord(10);
+	retrievedValue = getBufferWord(10) / 100;
 	writeString(retrievedValue,outputFile);
 	/* get BRV */
 	retrievedValue = getBufferWord(12);
 	writeString(retrievedValue,outputFile);
 	/* get MAT */
-	retrievedValue = getBufferWord(14);
+	retrievedValue = (getBufferWord(14) / 100) - 273.15;
 	writeString(retrievedValue,outputFile);
 	/* get EGO2 */
 	retrievedValue = getBufferWord(16);
 	writeString(retrievedValue,outputFile);
 	/* get IAP */
-	retrievedValue = getBufferWord(18);
+	retrievedValue = getBufferWord(18) / 100;
 	writeString(retrievedValue,outputFile);
 	/* get MAF */
 	retrievedValue = getBufferWord(20);
@@ -384,7 +385,7 @@ unsigned char writeOutBuffer(FILE *outputFile){
 	retrievedValue = getBufferWord(24);
 	writeString(retrievedValue,outputFile);
 	/* get RPM */
-	retrievedValue = getBufferWord(26);
+	retrievedValue = getBufferWord(26) / 2;
     writeString(retrievedValue,outputFile);
     /* get DRPM */
     retrievedValue = getBufferWord(28);
@@ -502,9 +503,10 @@ unsigned int writeString(double value,FILE *outputFile){
 	 /* TODO investigate using fputs */
     fputs(temp,outputFile);
     fputc(',',outputFile);
-	//	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
+//	for(i=0; (c = temp[i]) != END_OF_STRING;i++){ /* sprintf add EOF */
 //			fputc(c, outputFile);
 //	   }
+    return 0;
 }
 
 unsigned long int getBufferWord(unsigned int hiByte){
