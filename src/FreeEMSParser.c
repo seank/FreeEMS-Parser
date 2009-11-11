@@ -61,14 +61,16 @@
  */
 
 /* TODO move to header */
-unsigned char calcCheckSum(unsigned int size);
+unsigned char calcPayloadCheckSum(unsigned int size);
 unsigned char writeOutBuffer(FILE *outputFile);
 unsigned long int getBufferWord(unsigned int hiByte);
 unsigned int writeString(double value,FILE *outputFile);
 unsigned int writeHeader(FILE *outputFile);
 
 /*********************  STATICS **********************************/
-static char payloadBuffer[MEGABYTE];
+static char payloadBuffer[MEGABYTE]={0};
+static int payloadBufferIndex = 0; /* next free position in buf */
+
 static char wroteHeader = 0;
 
 int main(int argc, char *argv[]){
@@ -158,7 +160,8 @@ int main(int argc, char *argv[]){
 	fseek(inputFile,0L,SEEK_END);
 	inFileLength = ftell(inputFile);
 	rewind(inputFile);
-    while (currentCharacterCount < inFileLength ){
+	unsigned int bufferIndex = 0;
+	while (currentCharacterCount < inFileLength ){
 		if (!wroteHeader){
 			writeHeader(outputFile);
 		}
@@ -172,44 +175,44 @@ int main(int argc, char *argv[]){
 			packetPosition = 0;
 			startBytesFound++;
 			nextIsHeaderID = 1;
-			checkSumByte = 0; /* clear checksum */
+
 			printf("\n new start found");
 			}
 		    /* we are expecting the next char to be the headerID(byte) */
 		}else if ((currentCharacter != START_BYTE) && nextIsHeaderID){ /* if our packet header says there's a length calculate it */
+			     bufferIndex = 0;
 			     nextIsHeaderID = 0;
-			     checkSumByte += currentCharacter;
+			//     checkSumByte = 0; /* clear checksum */
+			//     checkSumByte += currentCharacter;
+			     payloadBuffer[bufferIndex++] = currentCharacter;
+			//     bufferIndex++;
 			     if (currentCharacter && SBIT4){ /* if there is a payload length flag find the length */
 			    	 headerID = currentCharacter;// TODO FIX returns 24 for some reason | SBIT4; /* figure out our ID so we know where our Length of Payload Bytes Are */
 			    	  if (headerID == SBIT3){  /* TODO build switch case for all IDs */
 			    		  /* TODO add checksum checking which should come right before the stop byte */
 			    //		  unsigned char bufferChar = 0;
-			    		  unsigned int bufferIndex = 0;
+
 			        //      fseek(inputFile,2,SEEK_CUR); / * cannot skip or checksum will be off */
 			    		  currentCharacter = fgetc(inputFile);
 			    		  currentCharacterCount++;
-			    		  checkSumByte += currentCharacter;
+			    		  payloadBuffer[bufferIndex++] = currentCharacter;
+			   // 		  bufferIndex++;
+			  //  		  checkSumByte += currentCharacter;
 			    		  currentCharacter = fgetc(inputFile);
 			    		  currentCharacterCount++;
 			    		  checkSumByte += currentCharacter;
-			    //		  printf("\n count %d",currentCharacterCount);
-			    //		  printf("\n character %d",currentCharacter);
-			    	//	  char junk = getchar();
-			    	      unsigned char high = fgetc(inputFile);
+			    		  payloadBuffer[bufferIndex++] = currentCharacter;
+			       	      unsigned char high = fgetc(inputFile);
 			    	      currentCharacterCount++;
-			    	      checkSumByte += currentCharacter;
-			    	      unsigned char low = fgetc(inputFile);
+			       	      payloadBuffer[bufferIndex++] = high;
+			       	      unsigned char low = fgetc(inputFile);
 			    	      currentCharacterCount++;
-			    	      checkSumByte += currentCharacter;
-			    	      payloadLength = ((int) high << 8) + low;
-			    	//	  payloadLength = getWord(inputFile); /* cannot use or checksum will be wrong */
-			    	//	  printf("\nLength is -> %d",payloadLength);
-			    	//	  unsigned char junk = getchar();
-			    		  while (insidePacket){
-			    	//		  printf("\n current checksum -> %d",checkSumByte);
+			    	      payloadBuffer[bufferIndex++] = low;
+			      	      payloadLength = ((int) high << 8) + low;
+			       		  while (insidePacket){
+			    			  printf("\n current Character -> %x",currentCharacter);
 			    			  currentCharacter = fgetc(inputFile);
 			    			  currentCharacterCount++;
-			    	//		  printf("\n byte count -> %d",currentCharacterCount);
 			    			  unsigned char escapedPair = 0;
 			    			  unsigned char falseEscape = 1;
 			    			  if(currentCharacter == ESCAPE_BYTE){
@@ -219,118 +222,93 @@ int main(int argc, char *argv[]){
 			    				  recognise pairs in the stream : */
                                  falseEscape = 1; /* guilty until proven innocient */
 			    				 escapedPair = fgetc(inputFile);
-			    				// checkSumByte += currentCharacter; /* do not use an escape_byte to calc sum */
+			    				 /* do not use an escape_byte to calc sum */
 			    				 currentCharacterCount++;
 			    				 if(escapedPair == ESCAPED_ESCAPE_BYTE){
                                 	 escapedEscapeBytesFound++;
-                                	 payloadBuffer[bufferIndex] = ESCAPE_BYTE;
-                                	 checkSumByte += ESCAPE_BYTE;
-                                	 bufferIndex++;
-                                	 falseEscape = 0;
+                                	 payloadBuffer[bufferIndex++] = ESCAPE_BYTE;
+                                   	 falseEscape = 0;
                                  }else if(escapedPair == ESCAPED_START_BYTE){
                                 	 escapedStartBytesFound++;
-                                	 payloadBuffer[bufferIndex] = START_BYTE;
-                                	 checkSumByte += START_BYTE;
-                                	 bufferIndex++;
-                                	 falseEscape = 0;
+                                	 payloadBuffer[bufferIndex++] = START_BYTE;
+                                   	 falseEscape = 0;
                                  }else if(escapedPair == ESCAPED_STOP_BYTE){
                                 	 escapedStopBytesFound++;
-                                  	 payloadBuffer[bufferIndex] = STOP_BYTE;
-                                  	checkSumByte += ESCAPED_STOP_BYTE;
-                                  	 falseEscape = 0;
-                                   	 bufferIndex++;
-			    			  }else if ((currentCharacter == ESCAPE_BYTE) && falseEscape){
+                                  	 payloadBuffer[bufferIndex++] = STOP_BYTE;
+                                   	 falseEscape = 0;
+                                 }else if ((currentCharacter == ESCAPE_BYTE) && falseEscape){
 			    				  fseek(inputFile, -1,SEEK_CUR);
 			    				  currentCharacterCount--;
 			    				  corruptPackets++;
 			    				  insidePacket = 0;
+			    				  // TODO add invalid escape count
 			    			  }
-			    			  //  ;
-			    			//  printf("\n char %x",bufferChar);
-			    			//  printf("\n count is %d",i);
-
-			    		  }else if(currentCharacter == START_BYTE){
+			    	      }else if(currentCharacter == START_BYTE){
 		    				  corruptPackets++;
 		    				  insidePacket = 0;
 			    		  }else if(currentCharacter == STOP_BYTE){
                               insidePacket = 0;
-			    			  bufferIndex--; /* the previous byte in the buffer should be the checksum */
-			    			  unsigned char checkSum = payloadBuffer[bufferIndex];
-			    			  checkSumByte -= checkSum;
-			    			  //	  unsigned char calculatedCheckSum = calcCheckSum(payloadBuffer,bufferIndex);
-			    		      //	  unsigned char calculatedCheckSum = 0; //for testing
-
+			    			  unsigned char checkSum = payloadBuffer[--bufferIndex]; /* the previous byte in the buffer should be the checksum */
+			    	          checkSumByte = calcPayloadCheckSum(bufferIndex);
 			    			  printf("\n buffer size %d",bufferIndex);
-			    			//  char pause = getchar();
 			    			  if ( checkSum == checkSumByte){
 			    				  printf("\n good sum found %x",checkSum);
 			    				  goodChecksums++;
+			    			    //  char pause = getchar();
 			    				  writeOutBuffer(outputFile);
 			    			 }else {
 			    				 corruptPackets++;
-			    				 // fputc('j',outputFile);
-			    				 printf("\n   bad sum found buffer %x ",checkSum);
+			    			     printf("\n   bad sum found buffer %x ",checkSum);
 			    				 printf("\n bad sum calced %x ",checkSumByte);
-			    				 printf("\n sum is now -> %d",(calcCheckSum(payloadLength)));
-			    				 writeOutBuffer(outputFile); /* TODO fix checksumming */
-			    		//		 char jjunk = getchar();
+			    				 printf("\n sum is now -> %d",checkSumByte);
+			    		    	 char jjunk = getchar();
 
 			    			 }
 			    		  }else if(insidePacket){
-			    			    checkSumByte += currentCharacter;
-			    			    payloadBuffer[bufferIndex] = currentCharacter;
-			    			    bufferIndex++;
-
+			    			    payloadBuffer[bufferIndex++] = currentCharacter;
 			    	   }
 			    		  packetsWithLength++;
-			    		  unsigned char test2 = payloadBuffer[--bufferIndex];
-			 //   		  printf("\n test out %x",test2);
-			 //   		  printf("\n bufferIndex -> %d",bufferIndex);
-			    		  bufferIndex++;
 			    	  }
-			    	 // printf("\n HeaderID is %d",headerID);
-
 			      } else {
 			    	  corruptPackets++;
 			    	  unknownHeaderIDCount++;
 			    	  printf("\n Unprovisioned HeaderID");
 			    	  insidePacket = 0;
-			    	//  char junk = getchar();
-			      }
+			   	      }
 			     }
 
 			}
-	//	if (insidePacket){
-	//		packetPosition++;
-	//	}
 	}
  //   printf("\n            Conents of Payload Buffer %s", payloadBuffer);
-    printf("\n        Packets with unknown headerID -> %d",unknownHeaderIDCount);
-    printf("\n                      Corrupt Packets -> %d",corruptPackets);
-    printf("\n           Packets with Good checksum -> %d",goodChecksums);
-    printf("\n           Escaped Escape Bytes Found -> %d",escapedEscapeBytesFound);
-    printf("\n            Escaped Start Bytes Found -> %d",escapedStartBytesFound);
-    printf("\n             Escaped Stop Bytes Found -> %d",escapedStopBytesFound);
-    printf("\n        Packets Without Payload Length -> %d",packetsWithoutLength);
-    printf("\n               Packets with HasLength -> %d",packetsWithLength);
-    printf("\n            Packets with Good Payload -> %d",correctPacketLength);
-    printf("\n      Packets With Bad Payload Length -> %d",incorrectPacketLength);
-	printf("\n                        Bytes In File -> %d",currentCharacterCount);
-    printf("\n                  Packet Starts Found -> %d",startBytesFound);
-    printf("\n             Double Start Bytes Found -> %d",doubleStartByteOccurances);
+    printf("\n               Packets with unknown headerID -> %d",unknownHeaderIDCount);
+    printf("\nCorrupt packets that MS would have just used!-> %d",corruptPackets);
+    printf("\n                  Packets with Good checksum -> %d",goodChecksums);
+    printf("\n                  Escaped Escape Bytes Found -> %d",escapedEscapeBytesFound);
+    printf("\n                   Escaped Start Bytes Found -> %d",escapedStartBytesFound);
+    printf("\n                    Escaped Stop Bytes Found -> %d",escapedStopBytesFound);
+    printf("\n              Packets Without Payload Length -> %d",packetsWithoutLength);
+    printf("\n                      Packets with HasLength -> %d",packetsWithLength);
+    printf("\n                   Packets with Good Payload -> %d",correctPacketLength);
+    printf("\n             Packets With Bad Payload Length -> %d",incorrectPacketLength);
+	printf("\n                               Bytes In File -> %d",currentCharacterCount);
+    printf("\n                         Packet Starts Found -> %d",startBytesFound);
+    printf("\n                    Double Start Bytes Found -> %d",doubleStartByteOccurances);
     printf("\n");
 	printf("\n\n\nThank you for choosing FreeEMS! c. Sean Keys see contribs at diyefi.org for a full list of contributors");
     return 0;
 }
 
 
-unsigned char calcCheckSum(unsigned int size){
+unsigned char calcPayloadCheckSum(unsigned int size){
 	printf("\n size %d",size);
-	int i;
+	unsigned int i;
 	char checksum = 0;
-	for(i=0;i < size;i++){
-		checksum += payloadBuffer[i];
+	for(i=0;i < size;i++){ // CANNOT USE PAYLOAD SIZE FROM HEADER
+		unsigned char value = payloadBuffer[i];
+		checksum += value;
+		printf("\n %x ",value);
 	}
+//	char pause = getchar();
 	return checksum;
 }
 
@@ -343,155 +321,151 @@ unsigned char writeOutBuffer(FILE *outputFile){
        'sp4', 'sp5', 'adc0', 'adc1', 'adc2', 'adc3', 'adc4', 'adc5', 'adc6',
        'adc7', 'adc8', 'adc9', 'adc10', 'adc11', 'adc12', 'adc13', 'adc14',
        'adc15', ] */
-//	unsigned int retrievedValue = 0;
-	 double retrievedValue = 0.0f;
-	 /* get IAT */
-	retrievedValue = (getBufferWord(0) / 100) - 273.15;
-	writeString(retrievedValue,outputFile);
-	 /* get CHT */
-	retrievedValue = (getBufferWord(2) / 100) - 273.15;
-	writeString(retrievedValue,outputFile);
-	 /* get TPS */
-	retrievedValue = getBufferWord(4) / 640;
-	writeString(retrievedValue,outputFile);
-	/* get EGO */
-	retrievedValue = getBufferWord(6);
-	writeString(retrievedValue,outputFile);
-	/* get MAP */
-	retrievedValue = getBufferWord(8) / 100;
-	writeString(retrievedValue,outputFile);
-	/* get AAP */
-	retrievedValue = getBufferWord(10) / 100;
-	writeString(retrievedValue,outputFile);
-	/* get BRV */
-	retrievedValue = getBufferWord(12);
-	writeString(retrievedValue,outputFile);
-	/* get MAT */
-	retrievedValue = (getBufferWord(14) / 100) - 273.15;
-	writeString(retrievedValue,outputFile);
-	/* get EGO2 */
-	retrievedValue = getBufferWord(16);
-	writeString(retrievedValue,outputFile);
-	/* get IAP */
-	retrievedValue = getBufferWord(18) / 100;
-	writeString(retrievedValue,outputFile);
-	/* get MAF */
-	retrievedValue = getBufferWord(20);
-	writeString(retrievedValue,outputFile);
-	/* get DMAP */
-	retrievedValue = getBufferWord(22);
-	writeString(retrievedValue,outputFile);
-	/* get DTPS */
-	retrievedValue = getBufferWord(24);
-	writeString(retrievedValue,outputFile);
-	/* get RPM */
-	retrievedValue = getBufferWord(26) / 2;
-    writeString(retrievedValue,outputFile);
-    /* get DRPM */
-    retrievedValue = getBufferWord(28);
-    writeString(retrievedValue,outputFile);
-    /* get DDRPM */
-    retrievedValue = getBufferWord(30);
-    writeString(retrievedValue,outputFile);
-    /* get LoadMain */
-    retrievedValue = getBufferWord(32);
-    writeString(retrievedValue,outputFile);
-    /* get VEMain */
-    retrievedValue = getBufferWord(34);
-    writeString(retrievedValue,outputFile);
-    /* get Lambda */
-    retrievedValue = getBufferWord(36);
-   	writeString(retrievedValue,outputFile);
-   	/* get AirFlow */
-   	retrievedValue = getBufferWord(38);
-   	writeString(retrievedValue,outputFile);
-   	/* get densityFuel */
-   	retrievedValue = getBufferWord(40);
-   	writeString(retrievedValue,outputFile);
-   	/* get BasePW */
-   	retrievedValue = getBufferWord(42);
-   	writeString(retrievedValue,outputFile);
-   	/* get IDT */
-   	retrievedValue = getBufferWord(44);
-   	writeString(retrievedValue,outputFile);
-   	/* get ETE */
-   	retrievedValue = getBufferWord(46);
-   	writeString(retrievedValue,outputFile);
-    /* get TFCTotal */
-	retrievedValue = getBufferWord(48);
-   	writeString(retrievedValue,outputFile);
-   	/* get FinalPW */
-	retrievedValue = getBufferWord(50);
-   	writeString(retrievedValue,outputFile);
-	/* get RefPW */
-   	retrievedValue = getBufferWord(52);
-   	writeString(retrievedValue,outputFile);
-   	/* get sp1 */
-	retrievedValue = getBufferWord(54);
-   	writeString(retrievedValue,outputFile);
-   	/* get sp2 */
-	retrievedValue = getBufferWord(56);
-   	writeString(retrievedValue,outputFile);
-   	/* get sp3 */
-	retrievedValue = getBufferWord(58);
-   	writeString(retrievedValue,outputFile);
-   	/* get sp4 */
-	retrievedValue = getBufferWord(60);
-   	writeString(retrievedValue,outputFile);
-   	/* get sp5 */
-	retrievedValue = getBufferWord(62);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc0 */
-   	retrievedValue = getBufferWord(64);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc1 */
-   	 retrievedValue = getBufferWord(66);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc2 */
-   	retrievedValue = getBufferWord(68);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc3 */
-   	retrievedValue = getBufferWord(70);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc4 */
-   	retrievedValue = getBufferWord(72);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc5 */
-   	retrievedValue = getBufferWord(73);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc6 */
-   	retrievedValue = getBufferWord(74);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc7 */
-   	retrievedValue = getBufferWord(76);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc8 */
-   	retrievedValue = getBufferWord(78);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc9 */
-   	retrievedValue = getBufferWord(80);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc10 */
-   	retrievedValue = getBufferWord(82);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc12 */
-   	retrievedValue = getBufferWord(84);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc13 */
-   	retrievedValue = getBufferWord(86);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc14 */
-    retrievedValue = getBufferWord(88);
-   	writeString(retrievedValue,outputFile);
-   	/* get adc 15 */
-    retrievedValue = getBufferWord(90);
-   	writeString(retrievedValue,outputFile);
+	    // unsigned int retrievedValue = 0;
+    	double retrievedValue = 0.0f;
+	    /* get IAT */
+		retrievedValue = (getBufferWord(5) / 100) - 273.15;
+		writeString(retrievedValue,outputFile);
+		/* get CHT */
+		retrievedValue = (getBufferWord(7) / 100) - 273.15;
+		writeString(retrievedValue,outputFile);
+		/* get TPS */
+		retrievedValue = getBufferWord(9) / 640;
+		writeString(retrievedValue,outputFile);
+		/* get EGO */
+		retrievedValue = getBufferWord(11);
+		writeString(retrievedValue,outputFile);
+		/* get MAP */
+		retrievedValue = getBufferWord(13) / 100;
+		writeString(retrievedValue,outputFile);
+		/* get AAP */
+		retrievedValue = getBufferWord(15) / 100;
+		writeString(retrievedValue,outputFile);
+		/* get BRV */
+		retrievedValue = getBufferWord(17);
+		writeString(retrievedValue,outputFile);
+		/* get MAT */
+		retrievedValue = (getBufferWord(19) / 100) - 273.15;
+		writeString(retrievedValue,outputFile);
+		/* get EGO2 */
+		retrievedValue = getBufferWord(21);
+		writeString(retrievedValue,outputFile);
+		/* get IAP */
+		retrievedValue = getBufferWord(23) / 100;
+		writeString(retrievedValue,outputFile);
+		/* get MAF */
+		retrievedValue = getBufferWord(25);
+		writeString(retrievedValue,outputFile);
+		/* get DMAP */
+		retrievedValue = getBufferWord(27);
+		writeString(retrievedValue,outputFile);
+		/* get DTPS */
+		retrievedValue = getBufferWord(29);
+		writeString(retrievedValue,outputFile);
+		/* get RPM */
+    	retrievedValue = getBufferWord(31) / 2;
+	    writeString(retrievedValue,outputFile);
+	    /* get DRPM */
+	    retrievedValue = getBufferWord(33);
+	    writeString(retrievedValue,outputFile);
+	    /* get DDRPM */
+	    retrievedValue = getBufferWord(35);
+	    writeString(retrievedValue,outputFile);
+	    /* get LoadMain */
+	    retrievedValue = getBufferWord(37);
+	    writeString(retrievedValue,outputFile);
+	    /* get VEMain */
+	    retrievedValue = getBufferWord(39);
+	    writeString(retrievedValue,outputFile);
+	    /* get Lambda */
+	    retrievedValue = getBufferWord(41);
+	    writeString(retrievedValue,outputFile);
+	    /* get AirFlow */
+	    retrievedValue = getBufferWord(43);
+	    writeString(retrievedValue,outputFile);
+	    /* get densityFuel */
+	    retrievedValue = getBufferWord(45);
+	    writeString(retrievedValue,outputFile);
+	    /* get BasePW */
+	    retrievedValue = getBufferWord(47);
+	    writeString(retrievedValue,outputFile);
+	    /* get IDT */
+	    retrievedValue = getBufferWord(49);
+	    writeString(retrievedValue,outputFile);
+	    /* get ETE */
+	    retrievedValue = getBufferWord(51);
+	    writeString(retrievedValue,outputFile);
+	    /* get TFCTotal */
+	    retrievedValue = getBufferWord(53);
+	    writeString(retrievedValue,outputFile);
+	    /* get FinalPW */
+	    retrievedValue = getBufferWord(55);
+	    writeString(retrievedValue,outputFile);
+	    /* get RefPW */
+	    retrievedValue = getBufferWord(57);
+	    writeString(retrievedValue,outputFile);
+	    /* get sp1 */
+	    retrievedValue = getBufferWord(59);
+	    writeString(retrievedValue,outputFile);
+	    /* get sp2 */
+    	retrievedValue = getBufferWord(61);
+	    writeString(retrievedValue,outputFile);
+	    /* get sp3 */
+	    retrievedValue = getBufferWord(63);
+	    writeString(retrievedValue,outputFile);
+	    /* get sp4 */
+	    retrievedValue = getBufferWord(65);
+	    writeString(retrievedValue,outputFile);
+	    /* get sp5 */
+	    retrievedValue = getBufferWord(67);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc0 */
+	    retrievedValue = getBufferWord(69);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc1 */
+	    retrievedValue = getBufferWord(71);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc2 */
+	    retrievedValue = getBufferWord(73);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc3 */
+	    retrievedValue = getBufferWord(75);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc4 */
+	    retrievedValue = getBufferWord(77);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc5 */
+	    retrievedValue = getBufferWord(79);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc6 */
+	    retrievedValue = getBufferWord(81);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc7 */
+	    retrievedValue = getBufferWord(83);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc8 */
+	    retrievedValue = getBufferWord(85);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc9 */
+	    retrievedValue = getBufferWord(87);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc10 */
+	    retrievedValue = getBufferWord(89);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc12 */
+	    retrievedValue = getBufferWord(91);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc13 */
+	    retrievedValue = getBufferWord(93);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc14 */
+	    retrievedValue = getBufferWord(95);
+	    writeString(retrievedValue,outputFile);
+	    /* get adc 15 */
+	    retrievedValue = getBufferWord(97);
+	    writeString(retrievedValue,outputFile);
 
     fputc('0',outputFile); /* TODO make program smart enought to exclude the , after the last value */
-
- //   writeString(26,outputFile); /* RPM */
- //   writeString(8,outputFile); /* MAP */
- //   writeString
     fputc('\n',outputFile); /* terminate end of row with a newline */
 
 	return 0;
