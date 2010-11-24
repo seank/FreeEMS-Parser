@@ -1,0 +1,15 @@
+Remove the debug directory with:
+
+git rm Debug
+
+Remove test files with:
+
+git rm *.bin *.csv
+
+Link appropriate test files from README.txt
+
+Delete this file.
+
+Create new repo and transfer the good files to it so that the repository isn't
+HUGE from containing big binary log files. Blow this repo away with push --force
+
