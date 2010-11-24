@@ -146,6 +146,7 @@ int main(int argc, char *argv[]){
 
 	}else if(argc == 2){  /* first arg is infile name */
 		strcpy(inputFileName,argv[1]);
+		strcpy(outputFileName,"default.csv");
 	}
 	inputFile = fopen(inputFileName,"rb");
 	outputFile = fopen(outputFileName,"w");
