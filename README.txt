@@ -9,7 +9,7 @@ gcc src/FreeEMS-Parser.c
 
 Run it with:
 
-a.out <inputFile> > /dev/null
+./a.out <inputFile> > /dev/null
 
 The output file will be in default.csv
 
